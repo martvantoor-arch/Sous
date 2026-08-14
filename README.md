@@ -41,6 +41,30 @@ curl -X POST localhost:3000/api/ingest/pocket \
 De webhook schrijft de ruwe bron weg en zet een job in de wachtrij; de worker
 doet de extractie. Kijk daarna op `/bronnen/<id>`.
 
+## Evaluatie draaien
+
+De ruwe transcripten staan bewust niet in de repo: er zit onder meer een
+wervingsgesprek in met opmerkingen over kandidaten. Zet ze lokaal in
+`eval/fixtures/` (gitignored), bied ze aan op de webhook, en laat de worker
+draaien. Daarna:
+
+```bash
+pnpm --filter @meetinghub/worker exec node dist/verify-quotes.js
+```
+
+Dat controleert of elk citaat in de opgeslagen extracties letterlijk in de ruwe
+bron staat, en geeft exitcode 1 zodra er één verzonnen is. Dat is de enige harde
+eis uit `docs/eval.md` die machinaal te toetsen is.
+
+Zonder API sleutel kun je een elders gedraaide extractie inladen langs dezelfde
+validatie en opslag:
+
+```bash
+node dist/import-extraction.js <sourceId> extractie.json extract-v1 claude-opus-5
+```
+
+Uitkomsten per run staan in `docs/eval-runs.md`.
+
 ## Wat sprint 1 wel en niet doet
 
 Wel: het volledige schema als migratie, de Pocket webhook met

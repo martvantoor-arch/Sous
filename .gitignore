@@ -5,4 +5,10 @@ dist/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# Ruwe transcripten en samenvattingen van de evaluatieset. Bevatten onder meer
+# een wervingsgesprek met opmerkingen over kandidaten; die horen niet in een
+# repo. Zet ze hier lokaal neer om de evaluatie te draaien.
+eval/fixtures/
+
 .DS_Store

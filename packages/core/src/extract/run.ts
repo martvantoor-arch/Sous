@@ -55,17 +55,37 @@ export async function extractSource(
 
   const result = parseExtraction(text);
 
+  return persistExtraction(source.id, result, {
+    promptVersion: prompt.version,
+    model: EXTRACTION_MODEL,
+  });
+}
+
+/**
+ * Schrijft een extractie weg en markeert de bron als verwerkt. Los van
+ * extractSource, zodat een extractie die buiten de pijplijn is gedraaid — een
+ * herdraai van een oudere bron, een evaluatierun — via dezelfde weg landt.
+ */
+export async function persistExtraction(
+  sourceId: string,
+  result: Extraction,
+  meta: { promptVersion: string; model: string },
+): Promise<ExtractionRun> {
+  const db = getDb();
+  const [source] = await db.select().from(sources).where(eq(sources.id, sourceId));
+  if (!source) throw new Error(`bron ${sourceId} bestaat niet`);
+
   const [row] = await db
     .insert(extractions)
     .values({
       sourceId: source.id,
-      promptVersion: prompt.version,
-      model: EXTRACTION_MODEL,
+      promptVersion: meta.promptVersion,
+      model: meta.model,
       result,
     })
     .returning({ id: extractions.id });
 
-  await markProcessed(db, source, result, prompt.version);
+  await markProcessed(db, source, result, meta);
 
   return { sourceId: source.id, extractionId: row!.id, result };
 }
@@ -110,7 +130,7 @@ async function markProcessed(
   db: Database,
   source: SourceRow,
   result: Extraction,
-  promptVersion: string,
+  meta: { promptVersion: string; model: string },
 ): Promise<void> {
   const sensitive = result.gevoelig.length > 0;
   const linkProject =
@@ -120,8 +140,8 @@ async function markProcessed(
     .update(sources)
     .set({
       processedAt: new Date(),
-      promptVersion,
-      model: EXTRACTION_MODEL,
+      promptVersion: meta.promptVersion,
+      model: meta.model,
       // De ruwe bron blijft staan, met een marker en de reden erbij.
       sensitive: sensitive || source.sensitive,
       sensitiveReason: sensitive

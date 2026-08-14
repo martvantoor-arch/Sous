@@ -1,4 +1,4 @@
-export { extractSource, type ExtractionRun } from './extract/run.js';
+export { extractSource, persistExtraction, type ExtractionRun } from './extract/run.js';
 export { extractionSchema, parseExtraction, type Extraction } from './extract/schema.js';
 export { buildContext } from './extract/context.js';
 export { loadPrompt, type PromptVersion } from './prompts.js';
