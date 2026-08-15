@@ -8,6 +8,11 @@
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
+    "//deploy": "De drie punten bouwen ook de workspace-afhankelijkheden, in de juiste volgorde. Zonder die punten mist tsc de dist van packages/db en packages/core.",
+    "build:web": "pnpm --filter \"@meetinghub/web...\" build",
+    "build:worker": "pnpm --filter \"@meetinghub/worker...\" build",
+    "start:web": "pnpm --filter @meetinghub/web start",
+    "start:worker": "pnpm --filter @meetinghub/worker start",
     "dev:web": "pnpm --filter @meetinghub/web dev",
     "dev:worker": "pnpm --filter @meetinghub/worker dev",
     "db:generate": "pnpm --filter @meetinghub/db generate",

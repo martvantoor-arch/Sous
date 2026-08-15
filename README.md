@@ -83,14 +83,24 @@ een detailpagina te komen.
 
 ## Railway
 
-Vier services in een project:
+Vier services in een project. **Laat de root directory op de repowortel staan,
+niet op `apps/web` of `apps/worker`.** Het zijn workspace-packages: ze leunen op
+de `dist` van `packages/db` en `packages/core`, en die bestaat pas als je die
+eerst bouwt.
 
-| Service | Wat |
-|---|---|
-| `web` | Next.js, root `apps/web` |
-| `worker` | Node, root `apps/worker`, start `node dist/index.js` |
-| `postgres` | Railway Postgres, extensies vector en pg_trgm aanzetten |
-| cron | Railway cron, drie schema's, zie onder |
+| Service | Build command | Start command | Env |
+|---|---|---|---|
+| `web` | `pnpm build:web` | `pnpm start:web` | `DATABASE_URL`, `POCKET_WEBHOOK_SECRET` |
+| `worker` | `pnpm build:worker` | `pnpm start:worker` | `DATABASE_URL`, `ANTHROPIC_API_KEY` |
+| `postgres` | — | — | extensies `vector` en `pg_trgm` aanzetten |
+| cron | — | zie onder | `DATABASE_URL` |
+
+De drie punten in `--filter "@meetinghub/worker..."` doen het werk: die bouwen
+ook de workspace-afhankelijkheden, in de juiste volgorde. Zonder die punten
+faalt de build op `Cannot find module '@meetinghub/core'`.
+
+De API sleutel hoort alleen bij de worker. Die is het enige proces dat Claude
+aanroept; web schrijft de bron weg en zet een job in de wachtrij.
 
 Cron:
 - `0 5 * * 1-5` ochtendbriefing
