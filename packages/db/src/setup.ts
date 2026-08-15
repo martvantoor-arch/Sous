@@ -28,21 +28,20 @@ export async function migrateToLatest(sql: Sql, db: Database): Promise<void> {
 }
 
 /**
- * Draait db/seed.sql, maar alleen op een lege database. Seeden op een gevulde
- * database zou dubbele termen opleveren, en het woordenboek is precies het ding
- * dat je met de hand bijhoudt.
+ * Draait db/seed.sql. Dat bestand is idempotent: elke insert slaat over wat er
+ * al staat. Zo blijft het de onderhouden bron voor het woordenboek, de personen
+ * en de projecten — voeg een term toe en de volgende deploy zet hem erin.
+ *
+ * Het overschrijft nooit iets. Wijzig je een bestaande regel in seed.sql, dan
+ * moet je die met de hand bijwerken; dat is expres, want deze tabellen groeien
+ * ook via de triage wachtrij.
  */
-export async function seedIfEmpty(
-  sql: Sql,
-  db: Database,
-  options: { force?: boolean } = {},
-): Promise<boolean> {
-  const existing = await db.select({ id: projects.id }).from(projects).limit(1);
-  if (existing.length > 0 && !options.force) return false;
-
+export async function runSeed(sql: Sql, db: Database): Promise<{ added: number }> {
+  const before = await db.select({ id: projects.id }).from(projects);
   const seedPath = join(here, '..', '..', '..', 'db', 'seed.sql');
   await sql.unsafe(await readFile(seedPath, 'utf8'));
-  return true;
+  const after = await db.select({ id: projects.id }).from(projects);
+  return { added: after.length - before.length };
 }
 
 /** Migreren en zo nodig seeden, op een eigen verbinding. */
@@ -50,12 +49,8 @@ export async function provision(url: string): Promise<void> {
   const { sql, db } = createDb(url, { max: 1 });
   try {
     await migrateToLatest(sql, db);
-    const seeded = await seedIfEmpty(sql, db);
-    console.log(
-      seeded
-        ? 'database ingericht: migraties gedraaid, woordenboek geseed'
-        : 'database ingericht: migraties gedraaid, seed overgeslagen (al gevuld)',
-    );
+    await runSeed(sql, db);
+    console.log('database ingericht: migraties gedraaid, referentiedata bijgewerkt');
   } finally {
     await sql.end();
   }

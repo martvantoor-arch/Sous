@@ -4,7 +4,8 @@
 
 -- --------------------------------------------------------------- personen
 
-insert into people (name, role, organisation, is_internal, aliases) values
+insert into people (name, role, organisation, is_internal, aliases)
+select * from (values
 ('Marten van Toor', 'Operations Manager', 'Foodconnect', true,
    array['Marten','Martin','Market','Marden']),
 ('Joost',    'Manager Supply Chain en Logistiek', 'Foodconnect', true,
@@ -18,7 +19,13 @@ insert into people (name, role, organisation, is_internal, aliases) values
 ('Bettina',  'Verantwoordelijk vastleggen TWI trainingen', 'Foodconnect', true,
    array['Bettina','Betina','patina','Tina','de Tina']),
 ('Bert',     null, 'Foodconnect', true, array['Bert','Bart']),
-('Jasper',   'Contactpersoon grondstoffen', null, false, array['Jasper']);
+('Jasper',   'Contactpersoon grondstoffen', null, false, array['Jasper']),
+('Bibi',     'Contactpersoon Albert Heijn', 'Albert Heijn', false, array['Bibi'])
+) as v(name, role, organisation, is_internal, aliases)
+where not exists (select 1 from people p where p.name = v.name);
+-- LET OP: Bibi's naam valt in de opname van 12 augustus geen enkele keer. De
+-- ASR kan hem dus nog niet verhaspeld hebben; vul aliassen aan zodra je een
+-- verhaspeling ziet. Zij zit aan de klantzijde: Foodconnect kookt, AH keurt.
 
 -- LET OP: Marit en Marije lijken in ASR sterk op elkaar en worden in het
 -- transcript door elkaar gehaald. Behandel een match op 'Mari' altijd als
@@ -26,7 +33,8 @@ insert into people (name, role, organisation, is_internal, aliases) values
 
 -- --------------------------------------------------------------- projecten
 
-insert into projects (name, code, description, aliases) values
+insert into projects (name, code, description, aliases)
+select * from (values
 ('AH Private Label vriesmaaltijden',
  'AHPL',
  'Receptuurontwikkeling, verpakking en systeeminvoer voor de Albert Heijn private label vriesmaaltijden. Systeemdeadline 9 september 2026.',
@@ -45,13 +53,16 @@ insert into projects (name, code, description, aliases) values
 ('Werving QA/QC Manager',
  'QAQC',
  'Werving en selectie QA/QC Manager. GEVOELIG: standaard uitgesloten van extractie.',
- array['QA manager','QC manager','vacature kwaliteit']);
+ array['QA manager','QC manager','vacature kwaliteit'])
+) as v(name, code, description, aliases)
+where not exists (select 1 from projects p where p.code = v.code);
 
 -- --------------------------------------------------------------- termen
 -- De variants komen letterlijk uit de transcripten. Dit is de tabel die je bij
 -- elke extractie meegeeft.
 
-insert into terms (term, expansion, domain, variants, note) values
+insert into terms (term, expansion, domain, variants, note)
+select * from (values
 ('BLK', 'Beter Leven Keurmerk', 'kwaliteit',
   array['bij elkaar','bij elkaar product','BOK','bok','B elkaar','bij elkaar producten'],
   'Meest voorkomende en meest schadelijke verhaspeling. De ASR maakt er consequent "bij elkaar" van, wat als gewone Nederlandse woordgroep leest.'),
@@ -101,4 +112,6 @@ insert into terms (term, expansion, domain, variants, note) values
   array['kruisbesmetting','kruisbestun','besmettingstraf'], null),
 
 ('ingangscontrole', null, 'proces',
-  array['ingangscontrole','in gangcontrole','ingangs controle'], null);
+  array['ingangscontrole','in gangcontrole','ingangs controle'], null)
+) as v(term, expansion, domain, variants, note)
+where not exists (select 1 from terms t where t.term = v.term);
