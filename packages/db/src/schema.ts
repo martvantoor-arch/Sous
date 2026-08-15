@@ -101,6 +101,29 @@ export const sourceChunks = pgTable('source_chunks', {
   embedding: vector('embedding', { dimensions: 1024 }),
 });
 
+/**
+ * Een meeting raakt vaak meer dan één project. De 13 augustus opname gaat over
+ * BLK implementatie én Digitalisering ingangscontrole; die punten horen elk bij
+ * hun eigen project. `sources.project_id` blijft het hoofdproject, handig als
+ * label; deze tabel houdt alles bij wat de bron raakt, hoofdproject incluis.
+ */
+export const sourceProjects = pgTable(
+  'source_projects',
+  {
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id),
+    confidence: confidence('confidence'),
+    /** hoofdproject van de bron, of een van de andere aangeraakte projecten */
+    isPrimary: boolean('is_primary').notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.sourceId, t.projectId] })],
+);
+
 export const sourceParticipants = pgTable(
   'source_participants',
   {

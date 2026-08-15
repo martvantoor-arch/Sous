@@ -50,7 +50,10 @@ packages/core   extractie, reconciliatie, prompts
 `sources` is de spil. Daaronder hangen `decisions`, `commitments`,
 `open_questions`, `risks`, `metrics` en `notes`. `terms` is het
 vaktermenwoordenboek dat bij elke extractie wordt meegegeven. `triage_queue`
-vangt alles met lage zekerheid. `change_log` legt elke mutatie vast.
+vangt alles met lage zekerheid, inclusief voorstellen voor personen die nog niet
+bestaan. `change_log` legt elke mutatie vast. Een bron hangt via
+`source_projects` aan alle projecten die hij raakt; een meeting gaat vaak over
+meer dan een project, en elk geëxtraheerd punt draagt zijn eigen project.
 
 Zie `db/schema.sql`.
 
@@ -65,9 +68,10 @@ moet het systeem opvangen:
   of "BOK". Boeuf Bourguignon wordt "Busbor in Johann". Thaise curry wordt "de
   taal". TWI wordt "de TV's". Bettina wordt "patina". Geef daarom altijd de
   `terms` tabel mee in de prompt.
-- **Pocket action items zijn onbetrouwbaar op eigenaar.** Alles krijgt
-  `Assignee: me`, ook waar het gesprek expliciet iemand anders aanwijst. Neem ze
-  mee als signaal, nooit als waarheid.
+- **Pocket action items zijn onbetrouwbaar op eigenaar.** `Assignee: me` staat
+  ook boven punten die in het gesprek bij iemand anders liggen. Soms staat er wel
+  een naam bij (`Other` plus de juiste persoon); dat is een aanwijzing, geen
+  bewijs. Neem ze mee als signaal, nooit als waarheid.
 - **Meetings bevatten lange irrelevante stukken.** Vakantiepraat, een uitweiding
   over wildviaducten, een rekendiscussie die nergens landt. Extractie moet ruis
   herkennen en negeren.
@@ -95,6 +99,8 @@ behoudt een marker met de reden. Standaard bewaartermijn voor ruwe transcripten:
   versienummer in de bestandsnaam. Nooit inline in code.
 - Elke Claude call logt: prompt versie, model, tokens, duur, kosten.
 - Bouw geen UI voor het wijzigen van status. Dat is expres.
+- Het systeem maakt nooit zelf een persoon of project aan. Het doet een voorstel
+  in de triage wachtrij; Marten keurt het goed.
 - Nederlandse veldnamen in de UI, Engelse in de database.
 - Eerst de evaluatieset laten slagen, dan pas verder bouwen. Zie `docs/eval.md`.
 
