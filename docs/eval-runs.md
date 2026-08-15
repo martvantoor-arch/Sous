@@ -93,7 +93,19 @@ Thaise curry, "Busbor in Johann" en "de bol" naar Boeuf Bourguignon, "patina" en
 "de Tina" naar Bettina, "de TV's" naar TWI. De vakantiepraat op de eerste vijf
 pagina's en de uitweiding over wolven en wildviaducten leverden geen punten op.
 
-### Volgende run: run 2, de baseline
+### De baseline draait op extract-v2, niet op v1
+
+Na run 1 is besloten dat een bron aan meerdere projecten moet kunnen hangen, en
+dat de extractie voorstellen moet doen voor personen die nog niet bestaan. `v1`
+kan dat structureel niet: één project per bron, en een verbod op personen zonder
+uitweg. Een precieze meting van v1 zou het verkeerde ding meten.
+
+`extract-v2` voegt toe: een project per punt, `nieuwe_personen` als expliciet
+voorstel, een gecorrigeerde uitspraak over de Pocket actiepunten (bevinding 3),
+en de ruisregel die nu voor de hele output geldt (bevinding 6). Bevindingen 1 en
+2 raken de sleutel zelf en wachten op een beslissing.
+
+### Volgende run: run 2, de baseline op extract-v2
 
 Dit is de run die telt. Hij draait op de deploy, met een echte API call, op een
 model dat deze antwoordsleutel niet in zijn context heeft.
@@ -105,9 +117,12 @@ model dat deze antwoordsleutel niet in zijn context heeft.
 5. Recall en eigenaarsfouten met de hand scoren tegen `docs/eval.md`, en de
    uitkomst hier onder Run 2 zetten.
 
-**Verander de prompt niet vóór deze run.** De zeven bevindingen hierboven zijn
-kandidaten voor `extract-v2`, maar zonder een schone meting van v1 heb je niets
-om v2 tegen af te zetten. Eerst de baseline, dan pas verbeteren.
+Bij het scoren: meeting 2 hoort nu punten aan twee projecten toe te wijzen, en
+de leverancierszijde van meeting 1 hoort als persoonsvoorstel terug te komen in
+plaats van als acht keer dezelfde triagevraag.
+
+Vanaf hier geldt de regel wel: **wijzig de prompt niet meer zonder run.** Elke
+volgende versie zet je af tegen deze baseline.
 
 Slaagt run 2 op de norm — minimaal 8 van de 10 punten per meeting en nul
 verzinsels — dan is de poort naar sprint 2 open.

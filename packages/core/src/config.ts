@@ -4,6 +4,10 @@
  * tegen wat hij kost.
  */
 
+/** Welke promptversie de extractie gebruikt. Vastleggen bij elke run. */
+export const EXTRACTION_PROMPT = (process.env.EXTRACTION_PROMPT ??
+  'extract-v2') as 'extract-v1' | 'extract-v2';
+
 export const EXTRACTION_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5';
 
 /** Effort voor de extractie. De kwaliteitseis is nul verzinsels, dus niet zuinig. */

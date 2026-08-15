@@ -1,7 +1,7 @@
 // De ruwe bron naast de extractie. Dit is de pagina waarop je ziet of het
 // systeem klopt: links wat er gezegd is, rechts wat het model eruit haalde.
 import { notFound } from 'next/navigation';
-import { getDb, sources, extractions, eq, desc } from '@meetinghub/db';
+import { getDb, sources, extractions, projects, people, eq, desc } from '@meetinghub/db';
 import { extractionSchema, type Extraction } from '@meetinghub/core';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +22,16 @@ export default async function BronPage({ params }: { params: Promise<{ id: strin
     .where(eq(extractions.sourceId, id))
     .orderBy(desc(extractions.createdAt))
     .limit(1);
+
+  // Uuid's in de extractie zijn onleesbaar; hier maken we er namen van.
+  const [projectRows, peopleRows] = await Promise.all([
+    db.select({ id: projects.id, name: projects.name, code: projects.code }).from(projects),
+    db.select({ id: people.id, name: people.name }).from(people),
+  ]);
+  const namen: Namen = {
+    projecten: new Map(projectRows.map((p) => [p.id, p.code ? `${p.name} (${p.code})` : p.name])),
+    personen: new Map(peopleRows.map((p) => [p.id, p.name])),
+  };
 
   // De opgeslagen JSON is bewust ruw. Valt hij buiten het schema, dan tonen we
   // dat in plaats van de pagina te laten crashen.
@@ -75,19 +85,46 @@ export default async function BronPage({ params }: { params: Promise<{ id: strin
               <Pre>{parsed.error.message}</Pre>
             </Panel>
           )}
-          {latest && parsed?.success && <ExtractionView result={parsed.data} />}
+          {latest && parsed?.success && <ExtractionView result={parsed.data} namen={namen} />}
         </section>
       </div>
     </div>
   );
 }
 
-function ExtractionView({ result }: { result: Extraction }) {
+interface Namen {
+  projecten: Map<string, string>;
+  personen: Map<string, string>;
+}
+
+function ProjectTag({ id, namen }: { id: string | null; namen: Namen }) {
+  if (!id) return null;
+  const naam = namen.projecten.get(id);
+  if (!naam) return null;
+  return (
+    <span className="mr-1 inline-block rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+      {naam}
+    </span>
+  );
+}
+
+function ExtractionView({ result, namen }: { result: Extraction; namen: Namen }) {
   return (
     <>
-      <Panel title="Project">
-        {result.project.naam_raw || '(niet herkend)'}{' '}
-        <Confidence value={result.project.confidence} />
+      <Panel title={`Projecten (${result.projecten.length})`}>
+        {result.projecten.length === 0 ? (
+          <p className="text-stone-500">Geen project herkend.</p>
+        ) : (
+          <ul className="space-y-1">
+            {result.projecten.map((p, i) => (
+              <li key={i}>
+                {namen.projecten.get(p.id ?? '') ?? (p.naam_raw || '(niet herkend)')}{' '}
+                {i === 0 && <Meta>hoofdproject</Meta>}
+                <Confidence value={p.confidence} />
+              </li>
+            ))}
+          </ul>
+        )}
       </Panel>
 
       <List
@@ -96,6 +133,7 @@ function ExtractionView({ result }: { result: Extraction }) {
         render={(d) => (
           <>
             <p>{d.wat}</p>
+            <ProjectTag id={d.project} namen={namen} />
             {d.context && <Meta>{d.context}</Meta>}
             <Quote>{d.citaat}</Quote>
             <Confidence value={d.confidence} />
@@ -109,6 +147,7 @@ function ExtractionView({ result }: { result: Extraction }) {
         render={(c) => (
           <>
             <p>{c.wat}</p>
+            <ProjectTag id={c.project} namen={namen} />
             <Meta>
               eigenaar: {c.owner_raw || '(onbekend)'} · deadline:{' '}
               {c.deadline ?? (c.deadline_raw || 'niet genoemd')}
@@ -138,6 +177,7 @@ function ExtractionView({ result }: { result: Extraction }) {
         render={(q) => (
           <>
             <p>{q.vraag}</p>
+            <ProjectTag id={q.project} namen={namen} />
             <Quote>{q.citaat}</Quote>
             <Confidence value={q.confidence} />
           </>
@@ -150,6 +190,7 @@ function ExtractionView({ result }: { result: Extraction }) {
         render={(r) => (
           <>
             <p>{r.omschrijving}</p>
+            <ProjectTag id={r.project} namen={namen} />
             <Meta>ernst: {r.ernst ?? 'niet bepaald'}</Meta>
             <Quote>{r.citaat}</Quote>
           </>
@@ -177,6 +218,25 @@ function ExtractionView({ result }: { result: Extraction }) {
             <p>{t.vermoedelijke_term}</p>
             <Meta>varianten: {t.varianten.join(', ') || '—'}</Meta>
             <Meta>{t.context}</Meta>
+          </>
+        )}
+      />
+
+      <List
+        title="Voorgestelde nieuwe personen"
+        items={result.nieuwe_personen}
+        render={(p) => (
+          <>
+            <p>{p.naam}</p>
+            <Meta>
+              {[p.rol, p.organisatie, p.is_intern === null ? null : p.is_intern ? 'intern' : 'extern']
+                .filter(Boolean)
+                .join(' · ') || 'rol onbekend'}
+            </Meta>
+            {p.varianten.length > 0 && <Meta>schrijfwijzen: {p.varianten.join(', ')}</Meta>}
+            {p.context && <Meta>{p.context}</Meta>}
+            <Quote>{p.citaat}</Quote>
+            <Confidence value={p.confidence} />
           </>
         )}
       />

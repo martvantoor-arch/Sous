@@ -4,7 +4,7 @@
 
 -- --------------------------------------------------------------- personen
 
-insert into people (name, role, organisation, is_internal, aliases) values
+with v(name, role, organisation, is_internal, aliases) as (values
 ('Marten van Toor', 'Operations Manager', 'Foodconnect', true,
    array['Marten','Martin','Market','Marden']),
 ('Joost',    'Manager Supply Chain en Logistiek', 'Foodconnect', true,
@@ -18,7 +18,25 @@ insert into people (name, role, organisation, is_internal, aliases) values
 ('Bettina',  'Verantwoordelijk vastleggen TWI trainingen', 'Foodconnect', true,
    array['Bettina','Betina','patina','Tina','de Tina']),
 ('Bert',     null, 'Foodconnect', true, array['Bert','Bart']),
-('Jasper',   'Contactpersoon grondstoffen', null, false, array['Jasper']);
+('Jasper',   'Contactpersoon grondstoffen', null, false, array['Jasper']),
+('Bibi',     'Category Manager Diepvries', 'Albert Heijn', false, array['Bibi'])
+),
+bijwerken as (
+  -- seed.sql is de onderhouden bron voor referentiedata: een nieuwe
+  -- verhaspeling of een aangescherpte omschrijving landt zo op elke omgeving.
+  update people t set
+        role = v.role,
+        organisation = v.organisation,
+        is_internal = v.is_internal,
+        aliases = v.aliases
+  from v where t.name = v.name returning 1
+)
+insert into people (name, role, organisation, is_internal, aliases)
+select name, role, organisation, is_internal, aliases from v
+where not exists (select 1 from people t where t.name = v.name);
+-- LET OP: Bibi's naam valt in de opname van 12 augustus geen enkele keer. De
+-- ASR kan hem dus nog niet verhaspeld hebben; vul aliassen aan zodra je een
+-- verhaspeling ziet. Zij zit aan de klantzijde: Foodconnect kookt, AH keurt.
 
 -- LET OP: Marit en Marije lijken in ASR sterk op elkaar en worden in het
 -- transcript door elkaar gehaald. Behandel een match op 'Mari' altijd als
@@ -26,10 +44,10 @@ insert into people (name, role, organisation, is_internal, aliases) values
 
 -- --------------------------------------------------------------- projecten
 
-insert into projects (name, code, description, aliases) values
+with v(name, code, description, aliases) as (values
 ('AH Private Label vriesmaaltijden',
  'AHPL',
- 'Receptuurontwikkeling, verpakking en systeeminvoer voor de Albert Heijn private label vriesmaaltijden. Systeemdeadline 9 september 2026.',
+ 'Receptuurontwikkeling, verpakking en systeeminvoer voor de Albert Heijn private label vriesmaaltijden. Foodconnect produceert, Albert Heijn is de klant; Bibi is daar Category Manager Diepvries. Staat los van het strategisch partnerschap op Maaltijd Thuis, ook al gaat het bij beide om Albert Heijn. Systeemdeadline 9 september 2026.',
  array['private label','PL','ronde 4','AH maaltijden','vriesmaaltijden']),
 
 ('BLK implementatie',
@@ -45,13 +63,26 @@ insert into projects (name, code, description, aliases) values
 ('Werving QA/QC Manager',
  'QAQC',
  'Werving en selectie QA/QC Manager. GEVOELIG: standaard uitgesloten van extractie.',
- array['QA manager','QC manager','vacature kwaliteit']);
+ array['QA manager','QC manager','vacature kwaliteit'])
+),
+bijwerken as (
+  -- seed.sql is de onderhouden bron voor referentiedata: een nieuwe
+  -- verhaspeling of een aangescherpte omschrijving landt zo op elke omgeving.
+  update projects t set
+        name = v.name,
+        description = v.description,
+        aliases = v.aliases
+  from v where t.code = v.code returning 1
+)
+insert into projects (name, code, description, aliases)
+select name, code, description, aliases from v
+where not exists (select 1 from projects t where t.code = v.code);
 
 -- --------------------------------------------------------------- termen
 -- De variants komen letterlijk uit de transcripten. Dit is de tabel die je bij
 -- elke extractie meegeeft.
 
-insert into terms (term, expansion, domain, variants, note) values
+with v(term, expansion, domain, variants, note) as (values
 ('BLK', 'Beter Leven Keurmerk', 'kwaliteit',
   array['bij elkaar','bij elkaar product','BOK','bok','B elkaar','bij elkaar producten'],
   'Meest voorkomende en meest schadelijke verhaspeling. De ASR maakt er consequent "bij elkaar" van, wat als gewone Nederlandse woordgroep leest.'),
@@ -101,4 +132,18 @@ insert into terms (term, expansion, domain, variants, note) values
   array['kruisbesmetting','kruisbestun','besmettingstraf'], null),
 
 ('ingangscontrole', null, 'proces',
-  array['ingangscontrole','in gangcontrole','ingangs controle'], null);
+  array['ingangscontrole','in gangcontrole','ingangs controle'], null)
+),
+bijwerken as (
+  -- seed.sql is de onderhouden bron voor referentiedata: een nieuwe
+  -- verhaspeling of een aangescherpte omschrijving landt zo op elke omgeving.
+  update terms t set
+        expansion = v.expansion,
+        domain = v.domain,
+        variants = v.variants,
+        note = v.note
+  from v where t.term = v.term returning 1
+)
+insert into terms (term, expansion, domain, variants, note)
+select term, expansion, domain, variants, note from v
+where not exists (select 1 from terms t where t.term = v.term);
