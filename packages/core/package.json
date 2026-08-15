@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp -r src/prompts dist/prompts",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/prompts && cp src/prompts/*.md dist/prompts/",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
