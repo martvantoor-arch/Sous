@@ -1,10 +1,11 @@
 import {
   getDb,
   sources,
+  projects,
   extractions,
   changeLog,
   eq,
-  type Database,
+  type DbOrTx,
 } from '@meetinghub/db';
 import { callClaude } from '../anthropic.js';
 import {
@@ -75,19 +76,24 @@ export async function persistExtraction(
   const [source] = await db.select().from(sources).where(eq(sources.id, sourceId));
   if (!source) throw new Error(`bron ${sourceId} bestaat niet`);
 
-  const [row] = await db
-    .insert(extractions)
-    .values({
-      sourceId: source.id,
-      promptVersion: meta.promptVersion,
-      model: meta.model,
-      result,
-    })
-    .returning({ id: extractions.id });
+  // In een transactie: een opgeslagen extractie met een bron die op onverwerkt
+  // blijft staan is een halve staat waar niemand meer uit komt.
+  const extractionId = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(extractions)
+      .values({
+        sourceId: source.id,
+        promptVersion: meta.promptVersion,
+        model: meta.model,
+        result,
+      })
+      .returning({ id: extractions.id });
 
-  await markProcessed(db, source, result, meta);
+    await markProcessed(tx, source, result, meta);
+    return row!.id;
+  });
 
-  return { sourceId: source.id, extractionId: row!.id, result };
+  return { sourceId: source.id, extractionId, result };
 }
 
 type SourceRow = typeof sources.$inferSelect;
@@ -127,14 +133,32 @@ function renderSource(source: SourceRow): string {
 }
 
 async function markProcessed(
-  db: Database,
+  db: DbOrTx,
   source: SourceRow,
   result: Extraction,
   meta: { promptVersion: string; model: string },
 ): Promise<void> {
   const sensitive = result.gevoelig.length > 0;
-  const linkProject =
+
+  // Het model hoort alleen te koppelen aan een project dat het meekreeg, maar
+  // een verzonnen of verouderde uuid mag de hele bron niet laten omvallen.
+  // Bestaat hij niet, dan koppelen we niet: liever geen koppeling dan een
+  // verkeerde, en de ruwe extractie blijft staan om opnieuw te draaien.
+  let linkProject =
     result.project.id !== null && result.project.confidence >= PROJECT_LINK_THRESHOLD;
+  if (linkProject) {
+    const [known] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, result.project.id!));
+    if (!known) {
+      console.warn(
+        `bron ${source.id}: project ${result.project.id} bestaat niet, niet gekoppeld ` +
+          `(genoemd als "${result.project.naam_raw}")`,
+      );
+      linkProject = false;
+    }
+  }
 
   await db
     .update(sources)

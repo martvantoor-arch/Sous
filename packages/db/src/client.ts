@@ -3,6 +3,9 @@ import postgres from 'postgres';
 import * as schema from './schema.js';
 
 export type Database = ReturnType<typeof createDb>['db'];
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+/** Voor functies die zowel los als binnen een transactie moeten werken. */
+export type DbOrTx = Database | Transaction;
 
 export function createDb(url: string, options?: { max?: number }) {
   const sql = postgres(url, {

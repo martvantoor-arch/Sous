@@ -9,6 +9,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "//deploy": "De drie punten bouwen ook de workspace-afhankelijkheden, in de juiste volgorde. Zonder die punten mist tsc de dist van packages/db en packages/core.",
+    "eval": "pnpm --filter \"@meetinghub/worker...\" build && node apps/worker/dist/eval.js",
     "build:web": "pnpm --filter \"@meetinghub/web...\" build",
     "build:worker": "pnpm --filter \"@meetinghub/worker...\" build",
     "start:web": "pnpm --filter @meetinghub/web start",
