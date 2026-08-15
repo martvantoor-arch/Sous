@@ -10,5 +10,6 @@ next-env.d.ts
 # een wervingsgesprek met opmerkingen over kandidaten; die horen niet in een
 # repo. Zet ze hier lokaal neer om de evaluatie te draaien.
 eval/fixtures/
+eval/manifest.json
 
 .DS_Store

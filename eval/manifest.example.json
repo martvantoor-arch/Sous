@@ -1,0 +1,32 @@
+[
+  {
+    "externalId": "2026-08-12-terugkoppeling",
+    "title": "Terugkoppeling maaltijden en kwaliteit",
+    "occurredAt": "2026-08-12T13:00:00Z",
+    "durationSec": 1982,
+    "summary": "fixtures/m1-summary.txt",
+    "transcript": "fixtures/m1-transcript.txt",
+    "actionItems": [
+      { "title": "Mijlpalenplanning opvragen", "assignee": "me" },
+      { "title": "Nutri-score ambitie bepalen", "assignee": "me" },
+      { "title": "Checken reden dikke folie", "assignee": "me" },
+      { "title": "Vleesleverancier Jumbo navragen", "assignee": "me" },
+      { "title": "Feedback keuring mailen", "assignee": "me" }
+    ]
+  },
+  {
+    "externalId": "2026-08-13-procedures",
+    "title": "Opzet procedures en kleurcode",
+    "occurredAt": "2026-08-13T08:30:00Z",
+    "durationSec": 3508,
+    "summary": "fixtures/m2-summary.txt",
+    "transcript": "fixtures/m2-transcript.txt",
+    "actionItems": [
+      { "title": "Mastergegevens en stellingvinkjes controleren", "assignee": "me" },
+      { "title": "TWI trainingen vastleggen", "assignee": "Other", "note": "Bettina" },
+      { "title": "Stellingen inrichten en onderhouden", "assignee": "Other", "note": "Marit" },
+      { "title": "Procedure ingangscontrole schrijven", "assignee": "me" },
+      { "title": "Lijst feature producten en inrichtingsplanning maken", "assignee": "me" }
+    ]
+  }
+]

@@ -1,9 +1,17 @@
 // Verwerkingsservice. Draait los van de web service zodat een lange extractie
 // nooit een webhook laat aflopen.
 import { EXTRACT_QUEUE, extractSource, getBoss, stopBoss, type ExtractJob } from '@meetinghub/core';
+import { provision } from '@meetinghub/db';
 import { requireEnv } from './env.js';
 
 requireEnv();
+
+// Een verse deploy richt zichzelf in. Migraties zijn idempotent en staan onder
+// een advisory lock; de seed draait alleen op een lege database. Zet
+// SKIP_PROVISION=1 als je de migraties met de hand wilt sturen.
+if (process.env.SKIP_PROVISION !== '1') {
+  await provision(process.env.DATABASE_URL!);
+}
 
 const boss = await getBoss();
 
