@@ -84,20 +84,24 @@ een detailpagina te komen.
 ## Railway
 
 Vier services in een project. **Laat de root directory op de repowortel staan,
-niet op `apps/web` of `apps/worker`.** Het zijn workspace-packages: ze leunen op
-de `dist` van `packages/db` en `packages/core`, en die bestaat pas als je die
-eerst bouwt.
+niet op `apps/web` of `apps/worker`.** Het zijn workspace-packages die leunen op
+de `dist` van `packages/db` en `packages/core`.
 
 | Service | Build command | Start command | Env |
 |---|---|---|---|
-| `web` | `pnpm build:web` | `pnpm start:web` | `DATABASE_URL`, `POCKET_WEBHOOK_SECRET` |
-| `worker` | `pnpm build:worker` | `pnpm start:worker` | `DATABASE_URL`, `ANTHROPIC_API_KEY` |
+| `web` | `pnpm --filter @meetinghub/web build` | `pnpm --filter @meetinghub/web start` | `DATABASE_URL`, `POCKET_WEBHOOK_SECRET` |
+| `worker` | `pnpm --filter @meetinghub/worker build` | `pnpm --filter @meetinghub/worker start` | `DATABASE_URL`, `ANTHROPIC_API_KEY` |
 | `postgres` | — | — | extensies `vector` en `pg_trgm` aanzetten |
 | cron | — | zie onder | `DATABASE_URL` |
 
-De drie punten in `--filter "@meetinghub/worker..."` doen het werk: die bouwen
-ook de workspace-afhankelijkheden, in de juiste volgorde. Zonder die punten
-faalt de build op `Cannot find module '@meetinghub/core'`.
+Dat zijn de commando's die Railpack zelf voorstelt, dus je hoeft ze niet te
+overschrijven. Ze werken omdat het `build` script van elke app zijn eigen
+workspace-afhankelijkheden eerst bouwt, met `--filter "<pakket>^..."`. Het dakje
+betekent "alleen de afhankelijkheden, niet het pakket zelf". Bouw je een app
+zonder dat, dan faalt tsc op `Cannot find module '@meetinghub/core'`.
+
+`pnpm build:web` en `pnpm build:worker` in de root doen hetzelfde en zijn er
+voor lokaal gebruik.
 
 De API sleutel hoort alleen bij de worker. Die is het enige proces dat Claude
 aanroept; web schrijft de bron weg en zet een job in de wachtrij.
