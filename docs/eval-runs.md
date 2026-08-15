@@ -3,6 +3,93 @@
 Logboek bij `docs/eval.md`. Elke promptwijziging krijgt hier een regel, met
 promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
+## Run 2 — 2026-08-15, extract-v2, claude-sonnet-5
+
+De eerste geldige meting. Gedraaid op de deploy: de opnames zijn via de echte
+webhook binnengekomen, de worker heeft ze geëxtraheerd met zijn eigen sleutel,
+en het resultaat is via `GET /api/bronnen/<id>` teruggelezen. Het model had de
+antwoordsleutel niet in context.
+
+**Uitkomst: gezakt.** Geen van beide opnames haalt 8 van de 10.
+
+| | Meeting 1, 12 aug | Meeting 2, 13 aug |
+|---|---|---|
+| Besluiten | 2 van 4 | **7 van 7** |
+| Toezeggingen in de lijst | 3 van 10 | 1 van 5 |
+| Toezeggingen incl. triage | 8 van 10 | 2 van 5 |
+| Open vragen incl. triage | 2 van 3 | 3 van 4 |
+| Risico's | 2 van 3 | **3 van 3** |
+| Cijfers | 3 van 4 | n.v.t. |
+| Verzonnen feiten | **0** | **0** |
+| Niet-letterlijke citaten | 3 van 24 | 1 van 18 |
+| Score incl. triage | 17 van 24 ≈ 7,1 | 15 van 19 ≈ 7,9 |
+
+Model: `claude-sonnet-5`, niet de standaard `claude-opus-5`. `ANTHROPIC_MODEL`
+staat zo op de worker. Dat hoort bij deze meting; een volgende run op Opus is
+een andere meting.
+
+### Wat goed ging
+
+Meeting 2 haalt alle zeven besluiten en alle drie de risico's. De
+multiprojectverdeling werkt: de batchregistratie en de recall gaan naar
+Digitalisering ingangscontrole, de stellingen en de kleurcode naar BLK, uit
+dezelfde opname. De gevoelige wervingspassage is gemarkeerd en er is niets uit
+geëxtraheerd. Het woordenboek doet zijn werk.
+
+Nul verzonnen feiten, machinaal getoetst.
+
+### De dominante oorzaak van het zakken
+
+**De triageregel eet de output op.** De prompt zegt "alles onder 0.75 gaat
+automatisch naar triage", en het model leest dat als *verplaatsen* in plaats van
+*ook melden*. Vijf van de zeven triagepunten van meeting 1 zijn toezeggingen die
+gewoon in de lijst hadden moeten staan, mét de vraag erbij:
+
+> [toezegging] Wie zegt toe deze feedback per mail te delen?
+> [toezegging] Wie gaat dit navragen? Eigenaarschap niet met zekerheid af te leiden.
+
+Het model heeft die punten dus wél gevonden. Het heeft ze alleen verkeerd
+gerubriceerd. Op de lijst alleen is de recall 3 van 10; tel je triage mee, dan is
+het 8 van 10. Dat is geen begripsprobleem maar een instructieprobleem.
+
+### Drie andere bevindingen
+
+**8. `owner_raw` blijft leeg zodra `owner` gevuld is.** Alle drie de
+toezeggingen van meeting 1 hebben een uuid als eigenaar en een lege `owner_raw`.
+De prompt vraagt `owner_raw` alleen te vullen als de eigenaar onbekend is.
+Gevolg: je kunt een toewijzing niet controleren zonder het transcript erbij te
+halen, terwijl dat juist het punt is waarop dit systeem het vaakst faut zit.
+Voorstel: `owner_raw` altijd vullen met wat er letterlijk stond.
+
+**9. Verantwoordelijkheden worden besluit óf toezegging, niet allebei.** In
+meeting 2 zijn "Marit richt de stellingen in" en "Bettina legt de TWI trainingen
+vast" correct als besluit vastgelegd, maar niet als toezegging. Daardoor zakt de
+toezeggingenscore naar 1 van 5 terwijl de inhoud er wel is. Een afspraak over wie
+iets gaat doen is allebei.
+
+**10. Citaten worden aan elkaar geplakt en opgepoetst.** Vier citaten staan niet
+letterlijk in de bron. Geen daarvan is verzonnen: twee plakken twee echte,
+niet-aaneengesloten beurten aan elkaar, één zet een punt midden in een zin, en
+één maakt van het ASR-woord "zonder" het woord "zonde". De prompt vraagt om het
+letterlijke citaat; dat moet strenger.
+
+**De datumval half doorstaan.** Het model zet terecht een open vraag klaar dat
+de dag tussen woensdag en donderdag wisselt zonder besluit — en legt tegelijk
+22 augustus vast als hard cijfer. Half goed is hier fout.
+
+### Naar extract-v3
+
+Drie wijzigingen, in volgorde van verwachte opbrengst:
+
+1. Triage naast de lijst, niet in plaats ervan. Een punt onder 0.75 hoort in
+   zijn eigen categorie mét een triagevraag erbij.
+2. `owner_raw` altijd vullen.
+3. Een verantwoordelijkheid die is toegewezen is zowel besluit als toezegging.
+
+Plus scherper op letterlijke citaten en op het niet vastleggen van een cijfer
+waarover in dezelfde adem een open vraag bestaat.
+
+
 ## Run 1 — 2026-08-14, extract-v1, claude-opus-5
 
 **Deze run telt niet als score.** Lees eerst de waarschuwing hieronder.
@@ -105,9 +192,9 @@ voorstel, een gecorrigeerde uitspraak over de Pocket actiepunten (bevinding 3),
 en de ruisregel die nu voor de hele output geldt (bevinding 6). Bevindingen 1 en
 2 raken de sleutel zelf en wachten op een beslissing.
 
-### Volgende run: run 2, de baseline op extract-v2
+### Hoe run 2 gedraaid is
 
-Dit is de run die telt. Hij draait op de deploy, met een echte API call, op een
+Dit was de run die telt. Hij draait op de deploy, met een echte API call, op een
 model dat deze antwoordsleutel niet in zijn context heeft.
 
 1. Fixtures in `eval/fixtures/`, manifest in `eval/manifest.json`.
