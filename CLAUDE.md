@@ -1,7 +1,17 @@
 # MeetingHub
 
-Persoonlijke projecthub voor Marten van Toor, Operations Manager bij Foodconnect
-(producent van maaltijden voor Maaltijd Thuis van Albert Heijn).
+Persoonlijke projecthub voor Marten van Toor, Operations Manager bij Foodconnect.
+
+Foodconnect heeft twee lijnen richting Albert Heijn, die niet door elkaar mogen
+lopen:
+
+- **Maaltijd Thuis**, het strategisch partnerschap. Foodconnect produceert de
+  maaltijden voor die propositie.
+- **AH private label diepvries**, een losstaande lijn. Foodconnect produceert
+  private label vriesmaaltijden voor de diepvriescategorie van Albert Heijn.
+  Bibi is daar Category Manager Diepvries en dus de klant, niet een collega.
+
+In beide gevallen is Foodconnect de producent en Albert Heijn de afnemer.
 
 Doel: meeting transcripten en doorgestuurde mail omzetten naar een levend
 projectgeheugen. Marten wijzigt zelf geen statussen. Dat gebeurt automatisch op
