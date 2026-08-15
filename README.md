@@ -43,18 +43,27 @@ doet de extractie. Kijk daarna op `/bronnen/<id>`.
 
 ## Evaluatie draaien
 
-De ruwe transcripten staan bewust niet in de repo: er zit onder meer een
-wervingsgesprek in met opmerkingen over kandidaten. Zet ze lokaal in
-`eval/fixtures/` (gitignored), bied ze aan op de webhook, en laat de worker
-draaien. Daarna:
+De poort naar de volgende sprint. De ruwe transcripten staan bewust niet in de
+repo: er zit een wervingsgesprek in met opmerkingen over kandidaten.
+
+Zet de samenvattingen en transcripten als platte tekst in `eval/fixtures/`,
+kopieer `eval/manifest.example.json` naar `eval/manifest.json` en pas de paden
+en datums aan. Beide zijn gitignored.
+
+Draai daarna vanuit `apps/worker`, met `DATABASE_URL` van de omgeving waar de
+worker op staat. Op Railway is dat `DATABASE_PUBLIC_URL` van de Postgres
+service, want je zit buiten het interne netwerk:
 
 ```bash
-pnpm --filter @meetinghub/worker exec node dist/verify-quotes.js
+node dist/ingest-fixtures.js ../../eval/manifest.json   # bronnen + wachtrij
+# de worker pikt ze op en extraheert; volg het in de Railway logs
+node dist/verify-quotes.js                              # exitcode 1 bij verzinsels
 ```
 
-Dat controleert of elk citaat in de opgeslagen extracties letterlijk in de ruwe
-bron staat, en geeft exitcode 1 zodra er één verzonnen is. Dat is de enige harde
-eis uit `docs/eval.md` die machinaal te toetsen is.
+`verify-quotes` controleert of elk citaat letterlijk in de ruwe bron staat. Dat
+is de enige harde eis uit `docs/eval.md` die machinaal te toetsen is; recall en
+eigenaarsfouten scoor je met de hand tegen de sleutel in dat bestand. Uitkomsten
+per run leg je vast in `docs/eval-runs.md`.
 
 Zonder API sleutel kun je een elders gedraaide extractie inladen langs dezelfde
 validatie en opslag:
@@ -62,8 +71,6 @@ validatie en opslag:
 ```bash
 node dist/import-extraction.js <sourceId> extractie.json extract-v1 claude-opus-5
 ```
-
-Uitkomsten per run staan in `docs/eval-runs.md`.
 
 ## Wat sprint 1 wel en niet doet
 

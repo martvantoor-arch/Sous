@@ -93,9 +93,21 @@ Thaise curry, "Busbor in Johann" en "de bol" naar Boeuf Bourguignon, "patina" en
 "de Tina" naar Bettina, "de TV's" naar TWI. De vakantiepraat op de eerste vijf
 pagina's en de uitweiding over wolven en wildviaducten leverden geen punten op.
 
-### Volgende run
+### Volgende run: run 2, de baseline
 
-Draaien met een API sleutel, via `pnpm dev:worker`, op een call die
-`docs/eval.md` niet in context heeft. Pas daarna is de slaagnorm — minimaal 8
-van de 10 punten per meeting en nul verzinsels — betekenisvol, en pas daarna is
-de poort naar sprint 2 open.
+Dit is de run die telt. Hij draait op de deploy, met een echte API call, op een
+model dat deze antwoordsleutel niet in zijn context heeft.
+
+1. Fixtures in `eval/fixtures/`, manifest in `eval/manifest.json`.
+2. `node dist/ingest-fixtures.js ../../eval/manifest.json`
+3. De worker extraheert. Volg het in de logs.
+4. `node dist/verify-quotes.js` — nul verzinsels is een harde eis.
+5. Recall en eigenaarsfouten met de hand scoren tegen `docs/eval.md`, en de
+   uitkomst hier onder Run 2 zetten.
+
+**Verander de prompt niet vóór deze run.** De zeven bevindingen hierboven zijn
+kandidaten voor `extract-v2`, maar zonder een schone meting van v1 heb je niets
+om v2 tegen af te zetten. Eerst de baseline, dan pas verbeteren.
+
+Slaagt run 2 op de norm — minimaal 8 van de 10 punten per meeting en nul
+verzinsels — dan is de poort naar sprint 2 open.

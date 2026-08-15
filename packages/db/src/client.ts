@@ -5,7 +5,13 @@ import * as schema from './schema.js';
 export type Database = ReturnType<typeof createDb>['db'];
 
 export function createDb(url: string, options?: { max?: number }) {
-  const sql = postgres(url, { max: options?.max ?? 5, ssl: sslMode() });
+  const sql = postgres(url, {
+    max: options?.max ?? 5,
+    ssl: sslMode(),
+    // Standaard dumpt postgres.js het hele notice-object in het log. Eén regel
+    // is genoeg; de ivfflat-waarschuwing bij een verse migratie is verwacht.
+    onnotice: (notice) => console.log(`[postgres] ${notice.message}`),
+  });
   return { sql, db: drizzle(sql, { schema }) };
 }
 
