@@ -1,6 +1,9 @@
 // Verwerkingsservice. Draait los van de web service zodat een lange extractie
 // nooit een webhook laat aflopen.
 import { EXTRACT_QUEUE, extractSource, getBoss, stopBoss, type ExtractJob } from '@meetinghub/core';
+import { requireEnv } from './env.js';
+
+requireEnv();
 
 const boss = await getBoss();
 

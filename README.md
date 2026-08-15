@@ -103,8 +103,22 @@ zonder dat, dan faalt tsc op `Cannot find module '@meetinghub/core'`.
 `pnpm build:web` en `pnpm build:worker` in de root doen hetzelfde en zijn er
 voor lokaal gebruik.
 
+**Variabelen worden niet gedeeld tussen services.** Leg de koppeling naar de
+database expliciet met een Railway referentie, op web én worker:
+
+```
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
 De API sleutel hoort alleen bij de worker. Die is het enige proces dat Claude
 aanroept; web schrijft de bron weg en zet een job in de wachtrij.
+
+De worker controleert bij het opstarten of `DATABASE_URL` en
+`ANTHROPIC_API_KEY` er zijn, en stopt met een leesbare melding als er een mist.
+De sleutel wordt bewust ook gecontroleerd, ook al gebruikt hij hem pas bij de
+eerste extractie: anders start de worker op en loopt de wachtrij vol met jobs
+die drie keer proberen en falen. De onderhoudscommando's `verify-quotes` en
+`import-extraction` hebben alleen `DATABASE_URL` nodig.
 
 Cron:
 - `0 5 * * 1-5` ochtendbriefing
