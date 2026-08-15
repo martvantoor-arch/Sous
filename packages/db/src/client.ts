@@ -5,12 +5,23 @@ import * as schema from './schema.js';
 export type Database = ReturnType<typeof createDb>['db'];
 
 export function createDb(url: string, options?: { max?: number }) {
-  const sql = postgres(url, {
-    max: options?.max ?? 5,
-    // Railway Postgres praat TLS zonder publiek vertrouwde keten.
-    ssl: url.includes('localhost') || url.includes('127.0.0.1') ? false : 'require',
-  });
+  const sql = postgres(url, { max: options?.max ?? 5, ssl: sslMode() });
   return { sql, db: drizzle(sql, { schema }) };
+}
+
+/**
+ * 'prefer' probeert TLS en valt terug op plat als de server het niet aanbiedt.
+ * Dat is precies wat je wilt: Railway's interne netwerk doet geen TLS, een
+ * externe verbinding meestal wel. Met 'require' breekt de interne verbinding
+ * af op "The server does not support SSL connections".
+ *
+ * Zet DATABASE_SSL als je het wilt afdwingen: require, verify-full, of disable.
+ */
+function sslMode(): 'require' | 'allow' | 'prefer' | 'verify-full' | boolean {
+  const explicit = process.env.DATABASE_SSL?.trim();
+  if (!explicit) return 'prefer';
+  if (explicit === 'disable' || explicit === 'false') return false;
+  return explicit as 'require' | 'allow' | 'prefer' | 'verify-full';
 }
 
 let cached: ReturnType<typeof createDb> | undefined;

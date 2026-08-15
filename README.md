@@ -94,6 +94,9 @@ de `dist` van `packages/db` en `packages/core`.
 | `postgres` | — | — | extensies `vector` en `pg_trgm` aanzetten |
 | cron | — | zie onder | `DATABASE_URL` |
 
+Meer is er niet nodig. Alles wat in `.env.example` onder "nog niet in gebruik"
+staat wordt door geen regel code gelezen en hoort bij sprint 4 en 5.
+
 Dat zijn de commando's die Railpack zelf voorstelt, dus je hoeft ze niet te
 overschrijven. Ze werken omdat het `build` script van elke app zijn eigen
 workspace-afhankelijkheden eerst bouwt, met `--filter "<pakket>^..."`. Het dakje
