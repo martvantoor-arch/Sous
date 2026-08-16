@@ -21,7 +21,20 @@ await boss.work<ExtractJob>(EXTRACT_QUEUE, { batchSize: 1 }, async ([job]) => {
   const started = Date.now();
   console.log(`[extractie] start ${sourceId}`);
 
-  const run = await extractSource(sourceId, { force });
+  // De fout hier vangen en opnieuw gooien: pg-boss bewaart hem wel bij de job,
+  // maar zet er niets over in de log. Een bron die blijft staan zonder dat er
+  // iets gebeurt is anders een stille storing — je ziet alleen dat er niets is.
+  let run;
+  try {
+    run = await extractSource(sourceId, { force });
+  } catch (err) {
+    console.error(
+      `[extractie] MISLUKT ${sourceId} na ${Date.now() - started}ms:`,
+      err instanceof Error ? err.stack ?? err.message : err,
+    );
+    throw err;
+  }
+
   if (!run) {
     console.log(`[extractie] ${sourceId} was al verwerkt, overgeslagen`);
     return;
