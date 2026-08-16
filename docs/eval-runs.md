@@ -3,6 +3,177 @@
 Logboek bij `docs/eval.md`. Elke promptwijziging krijgt hier een regel, met
 promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
+## Heeft de sleutel drie besluiten gemist?
+
+Terechte vraag na run 3: meeting 2 leverde elf besluiten waar de sleutel er
+zeven kent. Dat kan twee dingen betekenen. Of de prompt is te ruim, of de
+sleutel is te krap. Hieronder de vier extra punten, elk teruggezocht in het
+transcript.
+
+**Nagekeken, en de sleutel blijft staan.** Alle zeven besluiten uit de sleutel
+zitten in run 3, en er is geen achtste besluit dat de sleutel over het hoofd
+heeft gezien. De vier extra punten zijn van drie soorten:
+
+| Extra punt uit run 3 | Wat het echt is |
+|---|---|
+| Alle producten worden in de EFA-app geregistreerd | Zelfde besluit als "alle batchnummers noteren", fijner gesneden. Prima, geen fout. |
+| Ingangscontrole incl. temperatuur wordt in de EFA-app vastgelegd | Beschrijving van wat de ingangscontrole inhoudt. In de bron staat "dat zou ook in die EFA kunnen vastzetten" — een mogelijkheid, geen knoop. |
+| BLK-aandeel moet twee keer zo groot zijn als het niet-BLK dierlijke aandeel | Een regel van het keurmerk die iemand uitlegt ("omdat zij dat als een regel hebben gesteld"), en de rekensom eromheen loopt in het gesprek dood. Dit is exact de valkuil uit `docs/eval.md`: hoort een open vraag te worden. |
+| Bedrijven mogen zelf kiezen waar BLK in de productnaam staat | Ook een regel van het keurmerk, als antwoord op "maar mag het er ook voor staan?". Niemand kiest hier iets. |
+
+De rode draad: drie van de vier zijn **extern gegeven regels en beschrijvingen
+die als eigen besluit zijn opgeschreven**. Niemand hakt een knoop door. Dat is
+precies waar `extract-v4` op mikt met de toets "kun je het moment aanwijzen
+waarop de knoop werd doorgehakt?".
+
+Wat de vraag wél opleverde: het derde punt hoorde in `open_vragen` te staan en
+stond in `besluiten` — met de juiste triagevraag ernaast. Dat is geen te ruime
+besluitgrens maar een verkeerde bak. De sleutel had het goed.
+
+## Run 4 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
+
+Zelfde prompt en zelfde model als run 3, alleen `ANTHROPIC_EFFORT` van `high`
+naar `medium`. Bedoeld om één ding te meten: wat kost het aan kwaliteit als je
+de grootste kostenknop omdraait.
+
+**Uitkomst: fors goedkoper, en gezakt op meeting 1.**
+
+| | Meeting 1 | Meeting 2 |
+|---|---|---|
+| Outputtokens (was op `high`) | 13.726 (31.056) | 12.737 (27.730) |
+| Duur | 143s (was 292s) | 130s (was 268s) |
+| Besluiten uit de sleutel | 1½ van 4 (was 2) | **7 van 7** |
+| Toezeggingen gevonden | **7 van 10** (was 10) | 4 van 5 |
+| Open vragen gevonden | 1½ van 3 (was 3) | 3 van 4 |
+| Risico's gevonden | 2 van 3 (was 2½) | **3 van 3** |
+| Cijfers gevonden | **3 van 3** (was 2) | n.v.t. |
+| Citaten letterlijk | 22 van 23 | **25 van 25** |
+| Verzonnen feiten | **0** | **0** |
+| Score | **15 van 23 ≈ 6,5** | 17 van 19 ≈ 8,9 |
+
+Recall is geteld zoals in run 2 en 3: een punt telt mee waar het ook landt, in
+de lijst of in triage.
+
+### 56% minder outputtokens
+
+Dat is de opbrengst, en hij is groot. Ruwweg twee derde van de rekening bestond
+uit denktokens; `medium` halveert dat. Op tien meetings per week zakt Sonnet 5
+van $22,48 naar ongeveer $11 per maand, zonder één regel code.
+
+### Meeting 2 wordt er beter van, meeting 1 slechter
+
+Meeting 2 is op `medium` **netter dan op `high`**. Acht besluiten in plaats van
+elf, en juist de drie punten uit de tabel hierboven zijn verdwenen. De rekenregel
+staat nu waar hij hoort: als open vraag, met de triagevraag ernaast. Het
+denkbudget dat wegviel ging blijkbaar vooral op aan uitweiden.
+
+Meeting 1 verliest daarentegen inhoud die er wel toe doet. Drie toezeggingen
+zijn spoorloos — niet in de lijst, niet in triage:
+
+- binding Oma's Stoofvlees verhogen
+- binding Thaise curry aanpassen, minder droog
+- rode kool minder zuur maken
+
+Dat zijn niet de minste. Het zijn precies de drie receptaanpassingen met 19
+augustus als deadline, oftewel de reden dat die meeting gehouden werd. Ook het
+besluit over de fotografie van het stoofvlees en de open vraag of Nutri-score B
+een must is verdwijnen. Daar staat één winst tegenover: de cijfers zijn nu
+compleet, alle drie de data met de juiste ISO-datum erbij.
+
+Het patroon is navolgbaar. Meeting 2 is een gestructureerd overleg met duidelijke
+knopen. Meeting 1 is een terugkoppeling waarin tien losse punten langskomen die
+je alleen vindt als je het hele stuk uitkamt. Minder denkbudget kost je vooral
+het uitkammen.
+
+### Wat dit betekent
+
+**Zet `ANTHROPIC_EFFORT` terug op `high` voordat dit echt in gebruik gaat.** Een
+6,5 op meeting 1 zakt onder de norm van 8, en een gemiste toezegging is precies
+wat dit systeem hoort te voorkomen. De besparing is echt, maar je koopt hem met
+de recall op het type meeting dat je het vaakst hebt.
+
+Wel een voorbehoud: dit is één opname per instelling, geen serie. Het verschil
+is groot en systematisch genoeg om op af te gaan, maar het is geen bewijs.
+
+### Nieuwe bevinding
+
+**11. Een toezegging zonder citaat wordt toch opgeschreven.** Meeting 2 levert
+"Mastergegevens en stellingvinkjes controleren" met een leeg `citaat` en als
+`owner_raw` letterlijk "Actiepunt van opnamedienst wijst 'me' toe, geen
+expliciete tekstpassage in transcript teruggevonden". Het model is eerlijk over
+wat het niet vond, en zet het punt er dan alsnog in. Het komt puur uit een Pocket
+actiepunt, en dat is signaal, geen waarheid. Een punt zonder citaat hoort alleen
+in triage. Kandidaat voor v5.
+
+## Run 3 — 2026-08-15, extract-v3, claude-sonnet-5
+
+**Uitkomst: geslaagd op de citaateis, en een grote sprong op recall.**
+
+| | Meeting 1 | Meeting 2 |
+|---|---|---|
+| Toezeggingen in de lijst | **11** (was 3) | **4** (was 1) |
+| Waarvan uit de sleutel | ~9 van 10 | 4 van 5 |
+| Besluiten | 3 van 4 | 11 gevonden, 7 uit de sleutel |
+| Open vragen | 4 | 5 |
+| Risico's | 4 | 3 van 3 |
+| Citaten letterlijk | 26 van 27 | **31 van 31** |
+| Verzonnen feiten | **0** | **0** |
+| `owner_raw` gevuld | **overal** | **overal** |
+
+### Wat de drie wijzigingen deden
+
+**Triage naast de lijst in plaats van ervoor in de plaats** is de grote winst.
+Meeting 1 gaat van 3 naar 11 toezeggingen. De punten waren er in run 2 ook al,
+maar stonden alleen als vraag in triage. Nu staan ze in hun categorie mét de
+vraag ernaast, precies zoals bedoeld.
+
+**`owner_raw` altijd vullen** werkt. Elke toezegging draagt nu het letterlijke
+fragment waaruit de eigenaar volgt:
+
+> `owner_raw: "Nee, maar kan ik wel even vragen."`
+> `owner_raw: "Marit is daar verantwoordelijk en het onderhouden is Marit ook"`
+
+Daarmee is een toewijzing te controleren zonder het transcript erbij te halen.
+
+**Verantwoordelijkheid als besluit én toezegging** werkt: Marit en Bettina
+staan nu in allebei.
+
+**De datumval is nu helemaal doorstaan.** Meeting 1 legt geen 22 augustus meer
+vast als hard cijfer; alleen 19 augustus en de systeemdeadline blijven staan, en
+de leverdag staat als open vraag.
+
+### Wat er nog niet goed is
+
+Meeting 2 levert 11 besluiten waar de sleutel er 7 kent. Alle citaten zijn
+letterlijk, dus het zijn geen verzinsels, maar de scheidslijn tussen besluit en
+constatering is te ruim. Dat is de kandidaat voor v4.
+
+Eén citaat in meeting 1 is nog niet letterlijk: het model draait "Ja, dus de
+wens" om naar "Dus ja, de wens". Van vier niet-letterlijke citaten in run 2 naar
+één in run 3.
+
+### Kosten, gemeten
+
+Uit `llm_calls`, dus geen schatting. Gemiddeld per meeting op v3: 25.962
+prompt-tokens en 29.393 outputtokens.
+
+| Model | Per meeting | Per maand | Per jaar |
+|---|---|---|---|
+| Haiku 4.5 | $0,17 | $7,49 | $90 |
+| Sonnet 5 (introprijs t/m 31 aug) | $0,35 | $14,99 | $180 |
+| Sonnet 5 (normale prijs) | $0,52 | $22,48 | $270 |
+| Opus 5 | $0,87 | $37,47 | $450 |
+
+Bij tien meetings per week. **77% van de rekening is output, en 85% van die
+output is denkwerk** — ruwweg twee derde van alles wat je betaalt zijn
+denktokens. De grootste kostenknop is dus niet het model maar `ANTHROPIC_EFFORT`,
+dat nu op `high` staat. Dat is het eerste dat je moet meten voordat je aan het
+model gaat sleutelen.
+
+v3 kost 38% meer dan v2, omdat hij meer punten vindt en dus meer schrijft. Dat
+is de prijs van de recall die je terugkreeg.
+
+
 ## Run 2 — 2026-08-15, extract-v2, claude-sonnet-5
 
 De eerste geldige meting. Gedraaid op de deploy: de opnames zijn via de echte
