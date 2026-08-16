@@ -3,7 +3,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-export type PromptVersion = 'extract-v1' | 'extract-v2' | 'reconcile-v1';
+export type PromptVersion = 'extract-v1' | 'extract-v2' | 'extract-v3' | 'reconcile-v1';
 
 export interface LoadedPrompt {
   version: PromptVersion;
