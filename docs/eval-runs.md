@@ -5,15 +5,19 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
 ## Wat er nog moet gebeuren
 
-Twee variabelen op de worker in Railway, en dan is `extract-v4` te meten:
+Eén variabele op de worker in Railway: **`ANTHROPIC_EFFORT` van `medium` terug
+naar `high`.** Runs 4 en 5 zakken allebei op meeting 1; zie hieronder.
 
-| Variabele | Nu | Moet worden | Waarom |
-|---|---|---|---|
-| `ANTHROPIC_EFFORT` | `medium` | `high` | Runs 4 en 5 zakken allebei op meeting 1. Zie hieronder. |
-| `EXTRACTION_PROMPT` | `extract-v3` | `extract-v4` | Staat vast op de deploy, dus de standaard in de code doet niets. Run 5 draaide daardoor per ongeluk v3. |
+`EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
+`packages/core/src/config.ts` bepaalt de promptversie, en die staat op
+`extract-v4`. Run 5 draaide toch nog v3 omdat de worker op dat moment een build
+van vóór die commit draaide.
 
-`extract-v4` staat klaar in `packages/core/src/prompts` en is gedeployed. Zolang
-`EXTRACTION_PROMPT` op `extract-v3` staat wordt hij niet gebruikt.
+**Let op bij het loggen van een run.** De promptversie volgt uit de code, dus
+tussen pushen en meten zit een deploy. Kijk altijd eerst welke `promptVersie`
+er in de extractie staat voordat je een run als meting van een nieuwe versie
+opschrijft — anders schrijf je de verkeerde versie in dit logboek. Zo is run 5
+ontstaan.
 
 ## Heeft de sleutel drie besluiten gemist?
 
@@ -45,8 +49,7 @@ besluitgrens maar een verkeerde bak. De sleutel had het goed.
 ## Run 5 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
 
 Bedoeld als eerste run van `extract-v4`, maar de worker draaide `extract-v3`:
-`EXTRACTION_PROMPT` staat vast op de deploy en overrulet de standaard uit
-`packages/core/src/config.ts`. Zie "Wat er nog moet gebeuren" onderaan.
+de commit met v4 was tien minuten eerder gepusht en de deploy was nog niet rond.
 
 Daarmee is dit een **tweede meting van precies dezelfde instelling als run 4**,
 en dat is toevallig het nuttigste wat er nu kon gebeuren: het voorbehoud bij
