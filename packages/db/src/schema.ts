@@ -74,10 +74,18 @@ export const sources = pgTable('sources', {
   title: text('title'),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
   durationSec: integer('duration_sec'),
-  /** transcript of mailbody, onaangetast */
-  rawText: text('raw_text').notNull(),
+  /**
+   * Transcript of mailbody, onaangetast — tot de bewaartermijn verloopt.
+   *
+   * Leeg betekent één van twee dingen, en `rawPurgedAt` zegt welke: de bron
+   * kwam zonder tekst binnen, of de ruwe tekst is opgeruimd en alleen de
+   * gestructureerde extractie is over. Zie `retention.ts`.
+   */
+  rawText: text('raw_text'),
   /** Pocket samenvatting: primaire bron voor de extractie */
   summaryText: text('summary_text'),
+  /** Gezet zodra de ruwe tekst is opgeruimd. Null zolang die er nog is. */
+  rawPurgedAt: timestamp('raw_purged_at', { withTimezone: true }),
   /** Pocket action items, als signaal */
   providerActions: jsonb('provider_actions'),
   projectId: uuid('project_id').references(() => projects.id),

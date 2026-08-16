@@ -6,13 +6,21 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 ## Wat er nog moet gebeuren
 
 1. **`ANTHROPIC_EFFORT` op `high` houden.** Runs 4 en 5 draaiden op `medium` en
-   zakken allebei op meeting 1. De outputtellingen van runs 6 tot en met 8 wijzen
-   erop dat de variabele inmiddels weer op `high` staat; dat is de juiste stand.
-2. **`extract-v5` schrijven en meten.** v4 is op beide opnames gemeten en gaat
-   niet in gebruik zoals hij is; zie runs 6, 7 en 8 hieronder. v5 houdt de
-   besluittoets van v4 en de valkuildetectie, en voegt de verplaatsregel toe:
-   wat geen besluit is verdwijnt niet, maar gaat naar de categorie waar het wel
-   hoort.
+   zakken allebei op meeting 1. Vanaf run 6 staat hij weer op `high`; dat is de
+   juiste stand.
+2. **Scoor per categorie, niet op het totaal.** Runs 9 en 10 draaiden op exact
+   dezelfde instelling en verschillen bijna een heel punt. Een verschil van een
+   paar tienden tussen twee versies is ruis; een verschil in één categorie over
+   twee runs is een bevinding. Zie run 10.
+
+Wat er niet meer open staat: `extract-v5` is de versie die in gebruik is, en de
+poort naar sprint 2 is open — de norm van 8 wordt op beide opnames gehaald, in
+twee onafhankelijke runs, met nul verzinsels.
+
+Kandidaat voor v6, als daar aanleiding voor is: op meeting 1 zijn het besluit om
+niet te stunten met de prijs en de heroverweging van de fotografie van het
+stoofvlees door geen enkele versie ooit gevonden. Kijk daarbij eerst of de
+sleutel die twee wel scherp genoeg opschrijft.
 
 `EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
 `packages/core/src/config.ts` bepaalt de promptversie, en die staat op
@@ -51,6 +59,148 @@ waarop de knoop werd doorgehakt?".
 Wat de vraag wél opleverde: het derde punt hoorde in `open_vragen` te staan en
 stond in `besluiten` — met de juiste triagevraag ernaast. Dat is geen te ruime
 besluitgrens maar een verkeerde bak. De sleutel had het goed.
+
+## Run 9 — 2026-08-16, extract-v5, claude-sonnet-5, effort `high`
+
+Eerste run met een vingerafdruk in de logregel: `778383ca954f` op beide calls,
+gelijk aan wat `loadPrompt` lokaal berekent. Geen twijfel meer over welke tekst
+gedraaid heeft.
+
+**Uitkomst: geslaagd op beide opnames, en het schoonste resultaat tot nu toe.**
+
+| | Meeting 1 | Meeting 2 |
+|---|---|---|
+| Besluiten uit de sleutel | 2½ van 4 | **7 van 7** |
+| Besluiten totaal | 1 (+2 afrondingen) | **7** |
+| Toezeggingen | **10 van 10** | 4 van 5 |
+| Open vragen | 2 van 3 | 3 van 4 |
+| Risico's | 2 van 3 | 2 van 3 |
+| Cijfers | 3 van 3 | n.v.t. |
+| **Score** | **19½ van 23 ≈ 8,5** | **16 van 19 ≈ 8,4** |
+| Citaten letterlijk | **30 van 30** | **25 van 25** |
+| Verzinsels | **0** | **0** |
+| Punten zonder citaat in de lijst | **0** | **0** |
+
+### De drie wijzigingen doen precies wat ze moesten doen
+
+**De verplaatsregel werkt.** De rekenregel over het BLK-aandeel — het punt dat v4
+liet vallen — staat nu waar hij hoort:
+
+> `open_vragen`: "Klopt de rekenregel voor het minimale BLK-aandeel bij
+> samengestelde producten?"
+> `triage`: "De rekensom loopt in het gesprek dood — wat is de juiste formule?"
+
+**De minder strenge besluittoets herstelt meeting 2 volledig.** Zeven besluiten,
+alle zeven uit de sleutel, en géén achtste. Dat is het beste resultaat op deze
+as van alle negen runs: v3 leverde er elf of acht met vier te ruime, v4 er zes of
+zeven met een gemiste. v5 heeft ze precies.
+
+**Feedback met een afgesproken aanpassing werkt.** Meeting 1 gaat van zeven naar
+tien van tien toezeggingen. De drie receptaanpassingen die v4 op beide runs
+kwijtraakte staan er alle drie weer in, los van elkaar, elk met hun eigen
+maaltijd:
+
+> "Oma's Stoofvlees: saus/vlees weer meer binden"
+> "Rode Kool: bekijken of het zuurgehalte weer iets zoeter richting origineel kan"
+> "Thaise curry: binding aanpassen naar niveau tussen vorige en huidige versie"
+
+En bij de rode kool staat de bijbehorende triagevraag ernaast — "is er
+daadwerkelijk een aanpassing afgesproken, of blijft dit bij de constatering dat
+hij zuurder is?" — precies zoals triage naast de lijst hoort te werken.
+
+**De citaatregel is voor het derde meetpunt op rij honderd procent.** 30 van 30
+en 25 van 25, en geen enkel punt in een lijst zonder citaat. De regel uit run 4
+houdt stand.
+
+### Wat er niet goed genoeg is
+
+Meeting 2 blijft op 8,4 steken waar v3 op 9,2 en 9,5 zat, en dat komt door twee
+punten die v3 wél had en v5 niet:
+
+- **Het recallrisico is weg.** "Zonder volledige batchregistratie kan bij een
+  recall niet exact bepaald worden welke charge betrokken is" staat in de
+  sleutel en stond in run 3 en run 5. In run 9 staat het nergens — niet als
+  risico, niet in triage, niet onder een andere naam. Het operationele risico
+  van batchregistratie staat er wel; de reden waarom je het doet niet.
+- **De botsing tussen de twee kleursystemen** — kleur per productiedag tegen
+  kleur voor BLK — ontbreekt opnieuw. Alleen run 5 vond die.
+
+Op meeting 1 ontbreken het besluit over niet stunten met de prijs, en de vraag of
+de Boeuf Bourguignon mee kan in de zending van 21 augustus.
+
+### Oordeel
+
+**v5 gaat in gebruik.** Hij haalt de norm van 8 op beide opnames, is de enige
+versie met nul te ruime besluiten, en herstelt de recall van meeting 1 volledig.
+
+Tegen v3 is het een ruil en geen schone winst: v3 scoort hoger op meeting 2,
+maar koopt dat met vier besluiten die er niet horen te staan. Die schrijven een
+regel van het keurmerk weg alsof Foodconnect hem zelf genomen heeft, en dat is
+een ander soort fout dan een gemist punt — het verzint geen feit maar wel een
+beslissing. Voor een projectgeheugen weegt dat zwaarder.
+
+De twee gemiste punten op meeting 2 zijn in run 10 herhaald en bleken ruis. Zie
+hieronder.
+
+## Run 10 — 2026-08-16, extract-v5, claude-sonnet-5, effort `high`
+
+Zelfde prompt (`778383ca954f`), zelfde model, zelfde effort, zelfde opnames.
+Bedoeld om één ding te beantwoorden: waren de twee gemiste punten van run 9 ruis
+of structuur?
+
+**Ruis. Allebei komen ze terug.**
+
+| Meeting 2 | run 9 | run 10 |
+|---|---|---|
+| Recallrisico bij onvolledige batchregistratie | ontbreekt | **gevonden** |
+| Botsing tussen de twee kleursystemen | ontbreekt | **gevonden** |
+| Besluiten uit de sleutel | 7 van 7 | 7 van 7 |
+| Risico's | 2 van 3 | **3 van 3** |
+| Open vragen | 3 van 4 | 3½ van 4 |
+| Score | 8,4 | **9,2** |
+
+En andersom op meeting 1: daar zakt run 10 juist iets, op andere punten dan run 9
+miste.
+
+| | run 9 | run 10 |
+|---|---|---|
+| Meeting 1 | **8,5** | 8,0 |
+| Meeting 2 | 8,4 | **9,2** |
+| Citaten letterlijk | 30/30 en 25/25 | 22/23 en 24/24 |
+| Verzinsels | 0 | 0 |
+
+### De belangrijkste uitkomst gaat niet over v5 maar over de meetmethode
+
+Twee runs op exact dezelfde instelling verschillen een half tot bijna een heel
+punt, en missen niet dezelfde dingen. **Een enkele run kan een 8,4 niet van een
+9,2 onderscheiden.** Dat betekent dat een totaalcijfer uit één run geen grond is
+om een prompt op te wijzigen, en het betekent dat ik voorzichtiger moet zijn met
+verschillen van een paar tienden tussen versies.
+
+Wat wél robuust is, is de uitkomst per categorie. Die is over beide v5-runs
+identiek, en precies daar zit de winst waarvoor v5 geschreven is:
+
+| | v3 | v4 | v5 |
+|---|---|---|---|
+| Toezeggingen meeting 1 | 10 van 10 | 8 en 7 van 10 | **10 en 10 van 10** |
+| Besluiten meeting 2 | 11 en 8 (4 te ruim) | 6 en 7 (1 gemist) | **7 en 7, precies** |
+| Rekenregel als open vraag | ja | **twee keer weggelaten** | **twee keer aanwezig** |
+| Datumval | doorstaan | doorstaan | **twee keer doorstaan** |
+
+Op die vier punten liggen de versies wél uit elkaar, veel verder dan de ruis. Dat
+is de basis waarop v5 blijft staan, niet het totaalcijfer.
+
+### Wat er nog niet goed is
+
+Eén citaat in run 10 is niet letterlijk: het model draait "Ja, dus de wens" om
+naar "Dus ja, de wens" — exact dezelfde omkering als in run 3. Geen verzinsel,
+wel de derde keer dat dit specifieke fragment misgaat.
+
+Op meeting 1 blijven twee besluiten uit de sleutel structureel liggen over alle
+runs heen: het besluit om niet te stunten met de prijs, en de heroverweging van
+de fotografie van het stoofvlees. Die zijn nooit door een enkele versie gevonden.
+Dat is de kandidaat voor v6, samen met de vraag of de sleutel op die twee punten
+wel scherp genoeg is opgeschreven.
 
 ## Runs 6, 7 en 8 — 2026-08-16, extract-v4, claude-sonnet-5
 

@@ -62,12 +62,27 @@ export default async function BronPage({ params }: { params: Promise<{ id: strin
           <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
             Ruwe bron
           </h2>
-          <Panel title="Samenvatting">
-            <Pre>{source.summaryText ?? '(geen samenvatting geleverd)'}</Pre>
-          </Panel>
-          <Panel title="Transcript">
-            <Pre className="max-h-[32rem] overflow-y-auto">{source.rawText}</Pre>
-          </Panel>
+          {source.rawPurgedAt ? (
+            <Panel title="Ruwe tekst opgeruimd">
+              <p className="text-sm text-stone-600">
+                De samenvatting en het transcript van deze bron zijn verwijderd op{' '}
+                {source.rawPurgedAt.toLocaleDateString('nl-NL')}. De extractie hiernaast blijft
+                staan, maar de citaten zijn niet meer tegen de bron te toetsen en deze bron kan
+                niet opnieuw geëxtraheerd worden.
+              </p>
+            </Panel>
+          ) : (
+            <>
+              <Panel title="Samenvatting">
+                <Pre>{source.summaryText ?? '(geen samenvatting geleverd)'}</Pre>
+              </Panel>
+              <Panel title="Transcript">
+                <Pre className="max-h-[32rem] overflow-y-auto">
+                  {source.rawText ?? '(geen transcript)'}
+                </Pre>
+              </Panel>
+            </>
+          )}
           {source.providerActions != null && (
             <Panel title="Actiepunten van Pocket (signaal, geen waarheid)">
               <Pre>{JSON.stringify(source.providerActions, null, 2)}</Pre>
