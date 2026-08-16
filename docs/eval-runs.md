@@ -3,6 +3,75 @@
 Logboek bij `docs/eval.md`. Elke promptwijziging krijgt hier een regel, met
 promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
+## Run 3 — 2026-08-15, extract-v3, claude-sonnet-5
+
+**Uitkomst: geslaagd op de citaateis, en een grote sprong op recall.**
+
+| | Meeting 1 | Meeting 2 |
+|---|---|---|
+| Toezeggingen in de lijst | **11** (was 3) | **4** (was 1) |
+| Waarvan uit de sleutel | ~9 van 10 | 4 van 5 |
+| Besluiten | 3 van 4 | 11 gevonden, 7 uit de sleutel |
+| Open vragen | 4 | 5 |
+| Risico's | 4 | 3 van 3 |
+| Citaten letterlijk | 26 van 27 | **31 van 31** |
+| Verzonnen feiten | **0** | **0** |
+| `owner_raw` gevuld | **overal** | **overal** |
+
+### Wat de drie wijzigingen deden
+
+**Triage naast de lijst in plaats van ervoor in de plaats** is de grote winst.
+Meeting 1 gaat van 3 naar 11 toezeggingen. De punten waren er in run 2 ook al,
+maar stonden alleen als vraag in triage. Nu staan ze in hun categorie mét de
+vraag ernaast, precies zoals bedoeld.
+
+**`owner_raw` altijd vullen** werkt. Elke toezegging draagt nu het letterlijke
+fragment waaruit de eigenaar volgt:
+
+> `owner_raw: "Nee, maar kan ik wel even vragen."`
+> `owner_raw: "Marit is daar verantwoordelijk en het onderhouden is Marit ook"`
+
+Daarmee is een toewijzing te controleren zonder het transcript erbij te halen.
+
+**Verantwoordelijkheid als besluit én toezegging** werkt: Marit en Bettina
+staan nu in allebei.
+
+**De datumval is nu helemaal doorstaan.** Meeting 1 legt geen 22 augustus meer
+vast als hard cijfer; alleen 19 augustus en de systeemdeadline blijven staan, en
+de leverdag staat als open vraag.
+
+### Wat er nog niet goed is
+
+Meeting 2 levert 11 besluiten waar de sleutel er 7 kent. Alle citaten zijn
+letterlijk, dus het zijn geen verzinsels, maar de scheidslijn tussen besluit en
+constatering is te ruim. Dat is de kandidaat voor v4.
+
+Eén citaat in meeting 1 is nog niet letterlijk: het model draait "Ja, dus de
+wens" om naar "Dus ja, de wens". Van vier niet-letterlijke citaten in run 2 naar
+één in run 3.
+
+### Kosten, gemeten
+
+Uit `llm_calls`, dus geen schatting. Gemiddeld per meeting op v3: 25.962
+prompt-tokens en 29.393 outputtokens.
+
+| Model | Per meeting | Per maand | Per jaar |
+|---|---|---|---|
+| Haiku 4.5 | $0,17 | $7,49 | $90 |
+| Sonnet 5 (introprijs t/m 31 aug) | $0,35 | $14,99 | $180 |
+| Sonnet 5 (normale prijs) | $0,52 | $22,48 | $270 |
+| Opus 5 | $0,87 | $37,47 | $450 |
+
+Bij tien meetings per week. **77% van de rekening is output, en 85% van die
+output is denkwerk** — ruwweg twee derde van alles wat je betaalt zijn
+denktokens. De grootste kostenknop is dus niet het model maar `ANTHROPIC_EFFORT`,
+dat nu op `high` staat. Dat is het eerste dat je moet meten voordat je aan het
+model gaat sleutelen.
+
+v3 kost 38% meer dan v2, omdat hij meer punten vindt en dus meer schrijft. Dat
+is de prijs van de recall die je terugkreeg.
+
+
 ## Run 2 — 2026-08-15, extract-v2, claude-sonnet-5
 
 De eerste geldige meting. Gedraaid op de deploy: de opnames zijn via de echte
