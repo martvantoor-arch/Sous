@@ -4,7 +4,13 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-export type PromptVersion = 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4' | 'reconcile-v1';
+export type PromptVersion =
+  | 'extract-v1'
+  | 'extract-v2'
+  | 'extract-v3'
+  | 'extract-v4'
+  | 'extract-v5'
+  | 'reconcile-v1';
 
 export interface LoadedPrompt {
   version: PromptVersion;

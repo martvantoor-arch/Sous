@@ -6,7 +6,7 @@
 
 /** Welke promptversie de extractie gebruikt. Vastleggen bij elke run. */
 export const EXTRACTION_PROMPT = (process.env.EXTRACTION_PROMPT ??
-  'extract-v4') as 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4';
+  'extract-v5') as 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4' | 'extract-v5';
 
 export const EXTRACTION_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5';
 
