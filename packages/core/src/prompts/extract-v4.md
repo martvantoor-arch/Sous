@@ -137,9 +137,10 @@ Geen besluit:
 
 - Een **constatering** over hoe het nu al is. "Het zit al in die app" beschrijft
   de huidige toestand.
-- Een **uitleg** van een regel die van buiten komt. "BLK-producten mogen niet
-  onder reguliere producten staan" is de norm navertellen, geen keuze van dit
-  gesprek — tenzij men hier besluit hoe ze het gaan toepassen.
+- Een **uitleg** van een regel die van buiten komt. "Je mag zelf kiezen waar de
+  BLK-afkorting in de productnaam staat" is navertellen wat het keurmerk
+  toestaat, geen keuze van dit gesprek. Besluit het gesprek vervolgens wat men
+  zélf gaat doen binnen die regel, dan is dát het besluit.
 - Een **waarneming** over een product of proces. "De curry is te droog" is
   feedback; het besluit is wat je eraan gaat doen.
 - Iets waar het gesprek **niet uitkomt**. Dat is een open vraag.
@@ -147,6 +148,13 @@ Geen besluit:
 Bij twijfel: kun je het moment aanwijzen waarop de knoop werd doorgehakt? Zo
 nee, dan is het geen besluit. Vaak is het dan wel een toezegging, een open vraag
 of een risico — kijk daar eerst.
+
+Let op dat dit geen alibi wordt om te weinig op te schrijven. Past een groep het
+van buiten opgelegde kader toe op de eigen situatie — waar zetten wij onze
+stellingen, wat doen wij bij binnenkomst, waarmee beginnen wij de dag — dan is
+dat wél een besluit, ook als het klinkt als het navertellen van een norm. De
+vraag is niet of de regel van buiten komt, maar of dit gesprek er iets mee heeft
+vastgelegd.
 
 ## Een toegewezen verantwoordelijkheid is allebei
 
