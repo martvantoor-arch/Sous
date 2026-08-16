@@ -5,7 +5,7 @@
 // een open endpoint zou transcripten aan iedereen met de URL geven.
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { getDb, sources, extractions, eq, desc } from '@meetinghub/db';
+import { getDb, sources, extractions, llmCalls, eq, desc } from '@meetinghub/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,7 +38,28 @@ export async function GET(
     .orderBy(desc(extractions.createdAt))
     .limit(1);
 
+  // De kostenregels horen erbij: zonder tokens en prijs kun je een
+  // promptwijziging niet afzetten tegen wat hij kost.
+  const calls = await db
+    .select()
+    .from(llmCalls)
+    .where(eq(llmCalls.sourceId, id))
+    .orderBy(desc(llmCalls.createdAt));
+
   return NextResponse.json({
+    calls: calls.map((c) => ({
+      soort: c.kind,
+      promptVersie: c.promptVersion,
+      model: c.model,
+      inputTokens: c.inputTokens,
+      outputTokens: c.outputTokens,
+      cacheReadTokens: c.cacheReadTokens,
+      cacheWriteTokens: c.cacheWriteTokens,
+      duurMs: c.durationMs,
+      kostenDollarcent: c.costUsdCents,
+      stopReason: c.stopReason,
+      fout: c.error,
+    })),
     bron: {
       id: source.id,
       titel: source.title,
