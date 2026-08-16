@@ -275,6 +275,19 @@ async function queueProposals(
         `Aanmaken?`,
       confidence: p.confidence.toFixed(2),
     })),
+    // Vaktermen die het woordenboek nog niet kent. Het woordenboek gaat bij elke
+    // extractie mee in de prompt, dus een term die hier blijft liggen kost je
+    // elke volgende meeting opnieuw een verhaspeling.
+    ...result.nieuwe_termen.map((t) => ({
+      sourceId: source.id,
+      kind: 'nieuwe_term',
+      proposal: t as Record<string, unknown>,
+      question:
+        `"${t.vermoedelijke_term}" lijkt een vakterm die nog niet in het woordenboek staat` +
+        `${t.varianten.length ? `, gehoord als ${t.varianten.map((v) => `"${v}"`).join(' of ')}` : ''}. ` +
+        `Toevoegen?`,
+      confidence: '0.60',
+    })),
     ...result.triage.map((t) => ({
       sourceId: source.id,
       kind: t.kind,

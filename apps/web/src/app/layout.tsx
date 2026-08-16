@@ -12,10 +12,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="nl">
       <body className="min-h-screen bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
         <header className="border-b border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-6 py-4">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-6 gap-y-2 px-6 py-4">
             <Link href="/" className="font-semibold tracking-tight">
               MeetingHub
             </Link>
+            <nav className="flex gap-4 text-sm text-stone-600 dark:text-stone-400">
+              <Link href="/" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Bronnen
+              </Link>
+              <Link href="/triage" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Triage
+              </Link>
+              <Link href="/projecten" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Projecten
+              </Link>
+              <Link href="/personen" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Personen
+              </Link>
+              <Link href="/termen" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Termen
+              </Link>
+            </nav>
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
