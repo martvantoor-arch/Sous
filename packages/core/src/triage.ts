@@ -59,8 +59,10 @@ function lijst(voorstel: Record<string, unknown>, ...sleutels: string[]): string
 export async function resolveTriage(
   triageId: string,
   besluit: TriageBesluit,
-  db: DbOrTx = getDb(),
+  opties: { correctie?: Record<string, unknown>; db?: DbOrTx } = {},
 ): Promise<TriageUitkomst> {
+  const db = opties.db ?? getDb();
+
   const [item] = await db.select().from(triageQueue).where(eq(triageQueue.id, triageId));
   if (!item) throw new Error(`triage-item ${triageId} bestaat niet`);
   if (item.status !== 'open') throw new Error(`triage-item ${triageId} is al ${item.status}`);
@@ -68,7 +70,13 @@ export async function resolveTriage(
   const uitkomst: TriageUitkomst = { status: besluit };
 
   if (besluit === 'akkoord') {
-    const voorstel = (item.proposal ?? {}) as Record<string, unknown>;
+    // Het voorstel van het model is een gok, geen waarheid. Een verhaspelde
+    // naam corrigeer je hier, vóór hij het geheugen in gaat — daarna staat hij
+    // in elke prompt en in elke koppeling.
+    const voorstel = {
+      ...((item.proposal ?? {}) as Record<string, unknown>),
+      ...(opties.correctie ?? {}),
+    };
     const gemaakt = await maakAan(db, item.kind, voorstel, item.sourceId);
     if (gemaakt) uitkomst.aangemaakt = gemaakt;
   }

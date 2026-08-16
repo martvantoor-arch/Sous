@@ -29,6 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/personen" className="hover:text-stone-900 dark:hover:text-stone-100">
                 Personen
               </Link>
+              <Link href="/organogram" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Organogram
+              </Link>
               <Link href="/termen" className="hover:text-stone-900 dark:hover:text-stone-100">
                 Termen
               </Link>

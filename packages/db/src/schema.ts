@@ -1,5 +1,6 @@
 // Drizzle-spiegel van db/schema.sql. Kolomnamen Engels, zoals afgesproken.
 // Migraties nooit met de hand: pas dit bestand aan en draai `pnpm db:generate`.
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   boolean,
   date,
@@ -33,6 +34,15 @@ export const people = pgTable('people', {
   isInternal: boolean('is_internal').notNull().default(true),
   /** ASR verhaspelingen en roepnamen */
   aliases: text('aliases').array().notNull().default(sql`'{}'`),
+  /**
+   * Aan wie deze persoon rapporteert. Zelfverwijzend, dus het organogram is
+   * gewoon deze kolom uitgelezen als boom.
+   *
+   * Niet alleen voor het plaatje: wie aan wie rapporteert is context die helpt
+   * bij het afleiden van eigenaarschap. "Dat pakt mijn team op" is pas te
+   * herleiden als bekend is wie er in dat team zit.
+   */
+  managerId: uuid('manager_id').references((): AnyPgColumn => people.id),
   active: boolean('active').notNull().default(true),
   createdAt: createdAt(),
 });

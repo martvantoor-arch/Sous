@@ -3,6 +3,19 @@ export { extractionSchema, parseExtraction, type Extraction } from './extract/sc
 export { buildContext } from './extract/context.js';
 export { loadPrompt, type PromptVersion } from './prompts.js';
 export { resolveTriage, type TriageBesluit, type TriageUitkomst } from './triage.js';
+export {
+  maakPersoon,
+  wijzigPersoon,
+  zetPersoonActief,
+  verwijderPersoon,
+  tellVerwijzingenNaarPersoon,
+  maakTerm,
+  wijzigTerm,
+  verwijderTerm,
+  splitsLijst,
+  type PersoonInvoer,
+  type TermInvoer,
+} from './beheer.js';
 export { EXTRACTION_MODEL } from './config.js';
 export {
   EXTRACT_QUEUE,

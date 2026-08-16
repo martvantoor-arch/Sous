@@ -34,7 +34,12 @@ const LABEL: Record<string, string> = {
   conflict: 'Tegenstrijdigheid',
 };
 
-export default async function TriagePagina() {
+export default async function TriagePagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ melding?: string }>;
+}) {
+  const { melding } = await searchParams;
   const db = getDb();
 
   const items = await db
@@ -76,6 +81,12 @@ export default async function TriagePagina() {
         </p>
       </header>
 
+      {melding && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          {melding}
+        </p>
+      )}
+
       {gesorteerd.length === 0 && afgehandeld && (
         <p className="text-sm text-stone-500">
           Eerder goedgekeurde voorstellen staan bij{' '}
@@ -88,6 +99,7 @@ export default async function TriagePagina() {
       <ul className="space-y-3">
         {gesorteerd.map((item) => {
           const kanAanmaken = (VOLGORDE[item.kind] ?? 9) < 9;
+          const voorstel = (item.voorstel ?? null) as Record<string, unknown> | null;
           return (
             <li
               key={item.id}
@@ -113,38 +125,145 @@ export default async function TriagePagina() {
 
               <p className="mt-2 text-sm">{item.vraag}</p>
 
-              {item.voorstel != null && (
-                <pre className="mt-2 overflow-x-auto rounded bg-stone-50 p-2 text-xs text-stone-600 dark:bg-stone-950 dark:text-stone-400">
-                  {JSON.stringify(item.voorstel, null, 2)}
-                </pre>
-              )}
+              <form action={beslisOverTriage} className="mt-3 space-y-3">
+                <input type="hidden" name="id" value={item.id} />
 
-              <div className="mt-3 flex gap-2">
-                <form action={beslisOverTriage}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="besluit" value="akkoord" />
+                {kanAanmaken ? (
+                  <VoorstelVelden kind={item.kind} voorstel={voorstel} />
+                ) : (
+                  voorstel && (
+                    <pre className="overflow-x-auto rounded bg-stone-50 p-2 text-xs text-stone-600 dark:bg-stone-950 dark:text-stone-400">
+                      {JSON.stringify(voorstel, null, 2)}
+                    </pre>
+                  )
+                )}
+
+                <div className="flex gap-2">
                   <button
                     type="submit"
+                    name="besluit"
+                    value="akkoord"
                     className="rounded border border-stone-300 px-3 py-1 text-sm hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
                   >
                     {kanAanmaken ? 'Aanmaken' : 'Beantwoord'}
                   </button>
-                </form>
-                <form action={beslisOverTriage}>
-                  <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="besluit" value="afgewezen" />
                   <button
                     type="submit"
+                    name="besluit"
+                    value="afgewezen"
                     className="rounded px-3 py-1 text-sm text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
                   >
                     Afwijzen
                   </button>
-                </form>
-              </div>
+                </div>
+              </form>
             </li>
           );
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Het voorstel als invulbare velden in plaats van als JSON-blok.
+ *
+ * Het model raadt de naam uit een transcript waarin sprekers niet gelabeld zijn
+ * en de spraakherkenning namen structureel verhaspelt — "patina" voor Bettina.
+ * Zo'n naam moet je kunnen corrigeren vóór hij het geheugen in gaat, want daarna
+ * hangt hij aan elke toezegging en gaat hij mee in elke volgende prompt.
+ */
+function VoorstelVelden({
+  kind,
+  voorstel,
+}: {
+  kind: string;
+  voorstel: Record<string, unknown> | null;
+}) {
+  const tekst = (sleutel: string) => {
+    const v = voorstel?.[sleutel];
+    return typeof v === 'string' ? v : '';
+  };
+  const lijst = (sleutel: string) => {
+    const v = voorstel?.[sleutel];
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string').join(', ') : '';
+  };
+
+  if (kind === 'nieuwe_term') {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Invoer label="Term" naam="vermoedelijke_term" waarde={tekst('vermoedelijke_term')} />
+        <Invoer label="Betekenis" naam="betekenis" waarde={tekst('betekenis')} />
+        <Invoer
+          label="Verhaspelingen, gescheiden door komma's"
+          naam="varianten"
+          waarde={lijst('varianten')}
+          breed
+        />
+        {voorstel?.context ? (
+          <p className="text-xs text-stone-500 sm:col-span-2">{String(voorstel.context)}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (kind === 'project_onbekend' || kind === 'project') {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Invoer label="Projectnaam" naam="naam" waarde={tekst('naam') || tekst('naam_raw')} />
+        <Invoer label="Aliassen" naam="varianten" waarde={lijst('varianten')} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Invoer label="Naam" naam="naam" waarde={tekst('naam')} />
+      <Invoer label="Rol" naam="rol" waarde={tekst('rol')} />
+      <Invoer label="Organisatie" naam="organisatie" waarde={tekst('organisatie')} />
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Hoort bij</span>
+        <select
+          name="isIntern"
+          defaultValue={voorstel?.is_intern === false ? 'nee' : 'ja'}
+          className="rounded border border-stone-300 bg-white px-2 py-1 dark:border-stone-700 dark:bg-stone-950"
+        >
+          <option value="ja">Foodconnect</option>
+          <option value="nee">Extern</option>
+        </select>
+      </label>
+      <Invoer
+        label="Aliassen en verhaspelingen, gescheiden door komma's"
+        naam="varianten"
+        waarde={lijst('varianten')}
+        breed
+      />
+      {voorstel?.context ? (
+        <p className="text-xs text-stone-500 sm:col-span-2">{String(voorstel.context)}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function Invoer({
+  label,
+  naam,
+  waarde,
+  breed,
+}: {
+  label: string;
+  naam: string;
+  waarde: string;
+  breed?: boolean;
+}) {
+  return (
+    <label className={`flex flex-col gap-1 text-sm ${breed ? 'sm:col-span-2' : ''}`}>
+      <span className="text-xs font-medium text-stone-600 dark:text-stone-400">{label}</span>
+      <input
+        name={naam}
+        defaultValue={waarde}
+        className="rounded border border-stone-300 bg-white px-2 py-1 dark:border-stone-700 dark:bg-stone-950"
+      />
+    </label>
   );
 }
