@@ -6,10 +6,13 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 ## Wat er nog moet gebeuren
 
 1. **`ANTHROPIC_EFFORT` op `high` houden.** Runs 4 en 5 draaiden op `medium` en
-   zakken allebei op meeting 1. De outputtellingen van runs 6 en 7 wijzen erop
-   dat de variabele inmiddels weer op `high` staat; dat is de juiste stand.
-2. **`extract-v5` schrijven en meten.** v4 is gemeten en gaat niet in gebruik
-   zoals hij is; zie runs 6 en 7 hieronder.
+   zakken allebei op meeting 1. De outputtellingen van runs 6 tot en met 8 wijzen
+   erop dat de variabele inmiddels weer op `high` staat; dat is de juiste stand.
+2. **`extract-v5` schrijven en meten.** v4 is op beide opnames gemeten en gaat
+   niet in gebruik zoals hij is; zie runs 6, 7 en 8 hieronder. v5 houdt de
+   besluittoets van v4 en de valkuildetectie, en voegt de verplaatsregel toe:
+   wat geen besluit is verdwijnt niet, maar gaat naar de categorie waar het wel
+   hoort.
 
 `EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
 `packages/core/src/config.ts` bepaalt de promptversie, en die staat op
@@ -49,12 +52,13 @@ Wat de vraag wél opleverde: het derde punt hoorde in `open_vragen` te staan en
 stond in `besluiten` — met de juiste triagevraag ernaast. Dat is geen te ruime
 besluitgrens maar een verkeerde bak. De sleutel had het goed.
 
-## Runs 6 en 7 — 2026-08-16, extract-v4, claude-sonnet-5
+## Runs 6, 7 en 8 — 2026-08-16, extract-v4, claude-sonnet-5
 
-Twee keer dezelfde opname, meeting 2, op `extract-v4`. Beide calls schrijven
-7.912 cachetokens weg, dus ze draaiden byte voor byte dezelfde prompttekst.
+Beide opnames twee keer op `extract-v4`. Alle vier de calls schrijven of lezen
+7.912 cachetokens, dus ze draaiden byte voor byte dezelfde prompttekst.
 
-**Uitkomst: v4 doet wat hij moest doen en scoort er tóch slechter door.**
+**Uitkomst: v4 doet wat hij moest doen en scoort er op allebei de opnames
+slechter door. Hij gaat niet in gebruik.**
 
 | Meeting 2 | v3, run 3 | v3, run 5 | v4, run 6 | v4, run 7 |
 |---|---|---|---|---|
@@ -67,6 +71,24 @@ Twee keer dezelfde opname, meeting 2, op `extract-v4`. Beide calls schrijven
 | Outputtokens | 27.730 | 10.017 | 22.412 | 29.862 |
 | Citaten letterlijk | 31 van 31 | 21 van 21 | 22 van 24 | 26 van 26 |
 | Verzinsels | 0 | 0 | 0 | 0 |
+
+| Meeting 1 | v3, run 3 | v4, run 6 | v4, run 8 |
+|---|---|---|---|
+| Besluiten uit de sleutel | 2 van 4 | 1½ van 4 | 1½ van 4 |
+| Besluiten totaal | 3 | **1** | **1** |
+| Toezeggingen | 10 van 10 | 8 van 10 | 7 van 10 |
+| Open vragen | 3 van 3 | 2½ van 3 | 1½ van 3 |
+| Risico's | 2½ van 3 | 3 van 3 | 2½ van 3 |
+| Cijfers | 2 van 3 | 3 van 3 | 3 van 3 |
+| Score | **8,5** | 7,8 | 6,7 |
+| Citaten letterlijk | 26 van 27 | **33 van 33** | **24 van 24** |
+| Verzinsels | 0 | 0 | 0 |
+
+Meeting 1 laat het scherpst zien wat v4 doet: **één besluit**, waar v3 er drie
+vond en de sleutel er vier kent. De besluittoets snijdt hier zo diep dat alleen
+het E-nummerdossier overblijft; de rest wordt herverdeeld naar risico's en
+toezeggingen of valt weg. De citaten zijn wel voor het eerst honderd procent
+letterlijk, op allebei de opnames.
 
 ### Wat v4 goed doet
 
@@ -116,12 +138,30 @@ uitsluitingsregel als "weglaten" in plaats van "verplaatsen".
 `20dcdcf` logt elke call een vingerafdruk van de systeemprompt, zodat dit
 achteraf vast te stellen is in plaats van af te leiden uit cachetokens.
 
-**Een job kan stilvallen zonder spoor.** Meeting 1 van run 6 bleef ruim een half
-uur in de wachtrij staan zonder één regel in `llm_calls`, ook na een herstart van
-de worker. `callClaude` logt ook mislukte calls, dus de job is nooit tot de call
-gekomen. Zolang er geen zichtbaarheid op vastgelopen jobs is, is "de bron staat
-er wel maar er is niets gebeurd" een stille storing. Dat hoort op de lijst voor
-sprint 2, samen met de opvolgingsweergave.
+**De worker doet één bron tegelijk, en dat is trager dan het lijkt.** Meeting 1
+van run 6 stond ruim een half uur zonder één regel in `llm_calls`, en ik heb dat
+eerst als een vastgelopen job gelezen. Dat was fout. De workerlogs laten zien wat
+er werkelijk gebeurde:
+
+```
+07:11 start 44bcb66c   07:15 klaar in 238111ms
+07:21 start 6ff6a11c   07:26 klaar in 306818ms
+07:27 start fb2b93ef   07:32 klaar in 287852ms
+07:32 start ad17fce2   07:36 klaar in 260722ms
+```
+
+Vier bronnen, strikt na elkaar, vier tot vijf minuten per stuk. `boss.work` staat
+op `batchSize: 1`, dus een bron die als vierde binnenkomt begint pas na twintig
+minuten. Er is geen `llm_calls` regel zolang de call niet klaar is, dus "in de
+wachtrij" en "vastgelopen" zien er van buitenaf identiek uit.
+
+Daar kwam bij dat elke push van mij de worker herstartte en het lopende werk
+opnieuw in de wachtrij zette. De container in het logfragment hierboven start om
+07:11; alles daarvoor was werk dat ik zelf onderbroken had.
+
+Twee dingen om te onthouden. Reken op vier tot vijf minuten per meeting op hoge
+effort, dus tien minuten voor een evaluatieronde van twee. En deploy niet terwijl
+er een run loopt.
 
 ## Run 5 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
 
