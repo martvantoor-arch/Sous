@@ -1,14 +1,28 @@
 // Prompts staan als los bestand in src/prompts met een versienummer in de naam.
 // Nooit inline in code: dan kun je de versie niet meer bij de output loggen.
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-export type PromptVersion = 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4' | 'reconcile-v1';
+export type PromptVersion =
+  | 'extract-v1'
+  | 'extract-v2'
+  | 'extract-v3'
+  | 'extract-v4'
+  | 'extract-v5'
+  | 'reconcile-v1';
 
 export interface LoadedPrompt {
   version: PromptVersion;
   /** Alles na de eerste `---` scheidingsregel: de systeemprompt zelf. */
   system: string;
+  /**
+   * Sha256 over `system`, eerste twaalf tekens. De versienaam zegt welk bestand
+   * er gebruikt is; deze zegt welke inhoud dat bestand had. Dat verschil telt
+   * zodra een prompt wordt bijgewerkt vóór zijn eerste meting, of zodra een
+   * deploy achterloopt op wat er gepusht is.
+   */
+  fingerprint: string;
 }
 
 const cache = new Map<PromptVersion, LoadedPrompt>();
@@ -29,7 +43,8 @@ export async function loadPrompt(version: PromptVersion): Promise<LoadedPrompt> 
   const system = lines.slice(sep + 1).join('\n').trim();
   if (!system) throw new Error(`prompt ${version} is leeg na de scheidingsregel`);
 
-  const loaded: LoadedPrompt = { version, system };
+  const fingerprint = createHash('sha256').update(system, 'utf8').digest('hex').slice(0, 12);
+  const loaded: LoadedPrompt = { version, system, fingerprint };
   cache.set(version, loaded);
   return loaded;
 }

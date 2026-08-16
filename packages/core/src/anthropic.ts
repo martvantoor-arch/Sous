@@ -22,6 +22,8 @@ export interface CallOptions {
   /** Voor de logregel. */
   kind: 'extractie' | 'reconciliatie';
   promptVersion: string;
+  /** Vingerafdruk van de systeemprompt, zodat de logregel de tekst vastlegt en niet alleen de naam. */
+  promptFingerprint?: string;
   sourceId?: string;
 }
 
@@ -64,6 +66,7 @@ export async function callClaude(opts: CallOptions): Promise<CallResult> {
       sourceId: opts.sourceId ?? null,
       kind: opts.kind,
       promptVersion: opts.promptVersion,
+      promptFingerprint: opts.promptFingerprint ?? null,
       model: opts.model,
       inputTokens: message.usage.input_tokens,
       outputTokens: message.usage.output_tokens,
@@ -98,6 +101,7 @@ export async function callClaude(opts: CallOptions): Promise<CallResult> {
           sourceId: opts.sourceId ?? null,
           kind: opts.kind,
           promptVersion: opts.promptVersion,
+          promptFingerprint: opts.promptFingerprint ?? null,
           model: opts.model,
           durationMs: Date.now() - started,
           error: err instanceof Error ? err.message : String(err),

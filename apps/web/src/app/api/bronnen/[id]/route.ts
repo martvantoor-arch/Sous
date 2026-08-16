@@ -50,6 +50,9 @@ export async function GET(
     calls: calls.map((c) => ({
       soort: c.kind,
       promptVersie: c.promptVersion,
+      // De vingerafdruk hoort erbij: twee runs met dezelfde versienaam kunnen
+      // een andere prompttekst hebben gedraaid als er een deploy tussen zat.
+      promptVingerafdruk: c.promptFingerprint,
       model: c.model,
       inputTokens: c.inputTokens,
       outputTokens: c.outputTokens,

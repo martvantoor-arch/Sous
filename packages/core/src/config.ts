@@ -6,7 +6,7 @@
 
 /** Welke promptversie de extractie gebruikt. Vastleggen bij elke run. */
 export const EXTRACTION_PROMPT = (process.env.EXTRACTION_PROMPT ??
-  'extract-v4') as 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4';
+  'extract-v5') as 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4' | 'extract-v5';
 
 export const EXTRACTION_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5';
 
@@ -14,8 +14,17 @@ export const EXTRACTION_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5';
 export const EXTRACTION_EFFORT = (process.env.ANTHROPIC_EFFORT ??
   'high') as 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-/** Ruim genoeg voor denkwerk plus een volledige extractie van een lange meeting. */
-export const EXTRACTION_MAX_TOKENS = 32_000;
+/**
+ * Ruim genoeg voor denkwerk plus een volledige extractie van een lange meeting.
+ *
+ * Stond op 32.000 tot run 7 op 29.862 outputtokens uitkwam: 93% van het
+ * plafond. Eén punt meer en de extractie was afgekapt op `max_tokens`, en dan
+ * gooien we de hele call weg. Sonnet 5 kan tot 128.000 outputtokens en we
+ * streamen, dus een hogere grens kost niets zolang hij niet gehaald wordt.
+ * Dit is een vangnet, geen budget: wat een run werkelijk kost staat in
+ * `llm_calls`.
+ */
+export const EXTRACTION_MAX_TOKENS = 64_000;
 
 /** Dollar per miljoen tokens. */
 type Price = { input: number; output: number; cacheRead: number; cacheWrite: number };

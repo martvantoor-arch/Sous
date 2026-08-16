@@ -347,6 +347,15 @@ export const llmCalls = pgTable(
     /** extractie | reconciliatie */
     kind: text('kind').notNull(),
     promptVersion: text('prompt_version').notNull(),
+    /**
+     * Sha256 over de systeemprompt, eerste twaalf tekens. De versienaam zegt
+     * welk bestand er gebruikt is, niet welke inhoud dat bestand had. Tussen
+     * een push en een deploy zit tijd, en een prompt die je bijwerkt vóór zijn
+     * eerste meting houdt zijn naam. Zonder deze kolom kun je achteraf niet
+     * vaststellen welke tekst een run gedraaid heeft; met deze kolom zie je
+     * twee runs met dezelfde naam en een andere vingerafdruk meteen.
+     */
+    promptFingerprint: text('prompt_fingerprint'),
     model: text('model').notNull(),
     inputTokens: integer('input_tokens').notNull().default(0),
     outputTokens: integer('output_tokens').notNull().default(0),
