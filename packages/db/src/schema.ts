@@ -73,6 +73,48 @@ export const terms = pgTable('terms', {
   note: text('note'),
 });
 
+// -------------------------------------------------------------------- login
+
+/**
+ * Eenmalige inloglinks. We bewaren nooit de link zelf maar alleen een hash
+ * ervan: wie de database leest kan er dan geen geldige link uit terugbouwen.
+ *
+ * Een token is één keer bruikbaar (`usedAt`) en verloopt (`expiresAt`). Beide
+ * zijn nodig: zonder eenmaligheid blijft een link uit een oude mailbox werken,
+ * zonder verlooptijd blijft een nooit gebruikte link eeuwig geldig.
+ */
+export const loginTokens = pgTable(
+  'login_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('login_tokens_email_idx').on(t.email, t.createdAt)],
+);
+
+/**
+ * Actieve sessies. Ook hier alleen de hash van het cookie, om dezelfde reden.
+ * Een rij verwijderen is uitloggen; alle rijen verwijderen is iedereen uitloggen,
+ * en dat is precies wat je wilt kunnen als er ooit iets uitlekt.
+ */
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('auth_sessions_email_idx').on(t.email, t.createdAt)],
+);
+
 // ------------------------------------------------------------------- bronnen
 
 export const sources = pgTable('sources', {
