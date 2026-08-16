@@ -5,8 +5,11 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
 ## Wat er nog moet gebeuren
 
-Eén variabele op de worker in Railway: **`ANTHROPIC_EFFORT` van `medium` terug
-naar `high`.** Runs 4 en 5 zakken allebei op meeting 1; zie hieronder.
+1. **`ANTHROPIC_EFFORT` op `high` houden.** Runs 4 en 5 draaiden op `medium` en
+   zakken allebei op meeting 1. De outputtellingen van runs 6 en 7 wijzen erop
+   dat de variabele inmiddels weer op `high` staat; dat is de juiste stand.
+2. **`extract-v5` schrijven en meten.** v4 is gemeten en gaat niet in gebruik
+   zoals hij is; zie runs 6 en 7 hieronder.
 
 `EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
 `packages/core/src/config.ts` bepaalt de promptversie, en die staat op
@@ -45,6 +48,80 @@ waarop de knoop werd doorgehakt?".
 Wat de vraag wél opleverde: het derde punt hoorde in `open_vragen` te staan en
 stond in `besluiten` — met de juiste triagevraag ernaast. Dat is geen te ruime
 besluitgrens maar een verkeerde bak. De sleutel had het goed.
+
+## Runs 6 en 7 — 2026-08-16, extract-v4, claude-sonnet-5
+
+Twee keer dezelfde opname, meeting 2, op `extract-v4`. Beide calls schrijven
+7.912 cachetokens weg, dus ze draaiden byte voor byte dezelfde prompttekst.
+
+**Uitkomst: v4 doet wat hij moest doen en scoort er tóch slechter door.**
+
+| Meeting 2 | v3, run 3 | v3, run 5 | v4, run 6 | v4, run 7 |
+|---|---|---|---|---|
+| Besluiten uit de sleutel | 7 van 7 | 7 van 7 | 6 van 7 | 6 van 7 |
+| Besluiten totaal | 11 | 8 | 6 | 7 |
+| Toezeggingen | 4 van 5 | 4 van 5 | 4 van 5 | 4 van 5 |
+| Open vragen | 3½ van 4 | **4 van 4** | 3 van 4 | 2½ van 4 |
+| Risico's | 3 van 3 | 3 van 3 | 3 van 3 | 3 van 3 |
+| Score | 9,2 | **9,5** | 8,4 | 8,2 |
+| Outputtokens | 27.730 | 10.017 | 22.412 | 29.862 |
+| Citaten letterlijk | 31 van 31 | 21 van 21 | 22 van 24 | 26 van 26 |
+| Verzinsels | 0 | 0 | 0 | 0 |
+
+### Wat v4 goed doet
+
+**De te ruime besluitgrens is dicht.** Elf besluiten worden er zes of zeven, en
+de drie externe keurmerkregels die v3 als eigen besluit opschreef zijn weg. Dat
+was de hele opzet van v4 en het werkt.
+
+**En hij vindt een valkuil die v1 tot en met v3 alle drie misten.** `eval.md`
+schrijft voor dat de samenvatting en het transcript elkaar tegenspreken over
+waar BLK-producten in de stelling horen, en dat de juiste uitkomst een
+triagevraag is over welke van de twee klopt. v4 doet dat, in beide runs:
+
+> "Welke lezing over verticale plaatsing van BLK-producten klopt — bovenin
+> (samenvatting) of op de grond (transcript)?"
+
+Dat is precies het gedrag dat kernprincipe 5 vraagt, en geen enkele eerdere
+versie kwam eraan.
+
+### Waarom hij per saldo slechter scoort
+
+De winst op besluiten wordt betaald met verlies op open vragen. Wat geen besluit
+blijkt te zijn wordt **weggelaten in plaats van doorgeschoven**. De rekenregel
+over het BLK-aandeel is het duidelijkste geval: v3 had hem als open vraag én in
+triage, run 6 laat hem helemaal vallen, run 7 maakt er een risico van. De
+sleutel wil een open vraag.
+
+v4 zegt wel "vaak is het dan wel een toezegging, een open vraag of een risico —
+kijk daar eerst", maar dat is een suggestie. Er staat nergens dat iets wat je uit
+`besluiten` haalt ergens anders terecht **moet** komen.
+
+Daar komt bij: v4 is ook duurder. Bij vergelijkbaar denkbudget levert hij twee
+keer zoveel outputtokens als v3, vooral in triage — tien triagepunten in run 7
+tegen vier bij v3.
+
+### Wat er nu moet gebeuren
+
+`extract-v4` gaat niet in gebruik zoals hij is. De volgende versie houdt de
+besluittoets van v4 en de valkuildetectie, en voegt één regel toe: **een punt dat
+je uit `besluiten` weghaalt, verdwijnt niet — het gaat naar de categorie waar het
+wel hoort, en bij twijfel naar `open_vragen` met een triagevraag ernaast.** Dat
+is dezelfde les als bij v3, waar triage de lijst opat: het model leest een
+uitsluitingsregel als "weglaten" in plaats van "verplaatsen".
+
+### Twee dingen die deze runs over de meetopstelling leerden
+
+**Een promptversie is geen prompttekst.** Zie de waarschuwing bovenaan; sinds
+`20dcdcf` logt elke call een vingerafdruk van de systeemprompt, zodat dit
+achteraf vast te stellen is in plaats van af te leiden uit cachetokens.
+
+**Een job kan stilvallen zonder spoor.** Meeting 1 van run 6 bleef ruim een half
+uur in de wachtrij staan zonder één regel in `llm_calls`, ook na een herstart van
+de worker. `callClaude` logt ook mislukte calls, dus de job is nooit tot de call
+gekomen. Zolang er geen zichtbaarheid op vastgelopen jobs is, is "de bron staat
+er wel maar er is niets gebeurd" een stille storing. Dat hoort op de lijst voor
+sprint 2, samen met de opvolgingsweergave.
 
 ## Run 5 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
 
