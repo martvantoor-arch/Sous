@@ -8,16 +8,19 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 1. **`ANTHROPIC_EFFORT` op `high` houden.** Runs 4 en 5 draaiden op `medium` en
    zakken allebei op meeting 1. Vanaf run 6 staat hij weer op `high`; dat is de
    juiste stand.
-2. **v5 nog een keer draaien voordat er weer aan de prompt gesleuteld wordt.**
-   Run 9 is geslaagd op beide opnames maar is één meting. De twee punten die
-   meeting 2 mist kunnen ruis zijn. Herhaal dezelfde run en kijk of ze
-   terugkomen.
-3. **Daarna pas v6.** Kandidaten liggen klaar: het recallrisico en de botsing
-   tussen de twee kleursystemen worden op meeting 2 stelselmatig gemist.
+2. **Scoor per categorie, niet op het totaal.** Runs 9 en 10 draaiden op exact
+   dezelfde instelling en verschillen bijna een heel punt. Een verschil van een
+   paar tienden tussen twee versies is ruis; een verschil in één categorie over
+   twee runs is een bevinding. Zie run 10.
 
 Wat er niet meer open staat: `extract-v5` is de versie die in gebruik is, en de
-poort naar sprint 2 is open — de norm van 8 wordt op beide opnames gehaald met
-nul verzinsels.
+poort naar sprint 2 is open — de norm van 8 wordt op beide opnames gehaald, in
+twee onafhankelijke runs, met nul verzinsels.
+
+Kandidaat voor v6, als daar aanleiding voor is: op meeting 1 zijn het besluit om
+niet te stunten met de prijs en de heroverweging van de fotografie van het
+stoofvlees door geen enkele versie ooit gevonden. Kijk daarbij eerst of de
+sleutel die twee wel scherp genoeg opschrijft.
 
 `EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
 `packages/core/src/config.ts` bepaalt de promptversie, en die staat op
@@ -128,18 +131,76 @@ de Boeuf Bourguignon mee kan in de zending van 21 augustus.
 ### Oordeel
 
 **v5 gaat in gebruik.** Hij haalt de norm van 8 op beide opnames, is de enige
-versie met nul te ruime besluiten én nul niet-letterlijke citaten, en herstelt
-de recall van meeting 1 volledig.
+versie met nul te ruime besluiten, en herstelt de recall van meeting 1 volledig.
 
-Tegen v3 is het een ruil en geen schone winst: v3 scoort hoger op meeting 2 (9,2
-tegen 8,4), maar koopt dat met vier besluiten die er niet horen te staan. Die
-schrijven een regel van het keurmerk weg alsof Foodconnect hem zelf genomen
-heeft, en dat is een ander soort fout dan een gemist punt — het verzint geen
-feit maar wel een beslissing. Voor een projectgeheugen weegt dat zwaarder.
+Tegen v3 is het een ruil en geen schone winst: v3 scoort hoger op meeting 2,
+maar koopt dat met vier besluiten die er niet horen te staan. Die schrijven een
+regel van het keurmerk weg alsof Foodconnect hem zelf genomen heeft, en dat is
+een ander soort fout dan een gemist punt — het verzint geen feit maar wel een
+beslissing. Voor een projectgeheugen weegt dat zwaarder.
 
-Voorbehoud: dit is één meting van v5. De twee gemiste punten op meeting 2 kunnen
-ruis zijn; een tweede run op dezelfde instelling wijst dat uit. Dat is de eerste
-volgende meting, vóór er weer aan de prompt gesleuteld wordt.
+De twee gemiste punten op meeting 2 zijn in run 10 herhaald en bleken ruis. Zie
+hieronder.
+
+## Run 10 — 2026-08-16, extract-v5, claude-sonnet-5, effort `high`
+
+Zelfde prompt (`778383ca954f`), zelfde model, zelfde effort, zelfde opnames.
+Bedoeld om één ding te beantwoorden: waren de twee gemiste punten van run 9 ruis
+of structuur?
+
+**Ruis. Allebei komen ze terug.**
+
+| Meeting 2 | run 9 | run 10 |
+|---|---|---|
+| Recallrisico bij onvolledige batchregistratie | ontbreekt | **gevonden** |
+| Botsing tussen de twee kleursystemen | ontbreekt | **gevonden** |
+| Besluiten uit de sleutel | 7 van 7 | 7 van 7 |
+| Risico's | 2 van 3 | **3 van 3** |
+| Open vragen | 3 van 4 | 3½ van 4 |
+| Score | 8,4 | **9,2** |
+
+En andersom op meeting 1: daar zakt run 10 juist iets, op andere punten dan run 9
+miste.
+
+| | run 9 | run 10 |
+|---|---|---|
+| Meeting 1 | **8,5** | 8,0 |
+| Meeting 2 | 8,4 | **9,2** |
+| Citaten letterlijk | 30/30 en 25/25 | 22/23 en 24/24 |
+| Verzinsels | 0 | 0 |
+
+### De belangrijkste uitkomst gaat niet over v5 maar over de meetmethode
+
+Twee runs op exact dezelfde instelling verschillen een half tot bijna een heel
+punt, en missen niet dezelfde dingen. **Een enkele run kan een 8,4 niet van een
+9,2 onderscheiden.** Dat betekent dat een totaalcijfer uit één run geen grond is
+om een prompt op te wijzigen, en het betekent dat ik voorzichtiger moet zijn met
+verschillen van een paar tienden tussen versies.
+
+Wat wél robuust is, is de uitkomst per categorie. Die is over beide v5-runs
+identiek, en precies daar zit de winst waarvoor v5 geschreven is:
+
+| | v3 | v4 | v5 |
+|---|---|---|---|
+| Toezeggingen meeting 1 | 10 van 10 | 8 en 7 van 10 | **10 en 10 van 10** |
+| Besluiten meeting 2 | 11 en 8 (4 te ruim) | 6 en 7 (1 gemist) | **7 en 7, precies** |
+| Rekenregel als open vraag | ja | **twee keer weggelaten** | **twee keer aanwezig** |
+| Datumval | doorstaan | doorstaan | **twee keer doorstaan** |
+
+Op die vier punten liggen de versies wél uit elkaar, veel verder dan de ruis. Dat
+is de basis waarop v5 blijft staan, niet het totaalcijfer.
+
+### Wat er nog niet goed is
+
+Eén citaat in run 10 is niet letterlijk: het model draait "Ja, dus de wens" om
+naar "Dus ja, de wens" — exact dezelfde omkering als in run 3. Geen verzinsel,
+wel de derde keer dat dit specifieke fragment misgaat.
+
+Op meeting 1 blijven twee besluiten uit de sleutel structureel liggen over alle
+runs heen: het besluit om niet te stunten met de prijs, en de heroverweging van
+de fotografie van het stoofvlees. Die zijn nooit door een enkele versie gevonden.
+Dat is de kandidaat voor v6, samen met de vraag of de sleutel op die twee punten
+wel scherp genoeg is opgeschreven.
 
 ## Runs 6, 7 en 8 — 2026-08-16, extract-v4, claude-sonnet-5
 
