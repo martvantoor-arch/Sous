@@ -3,6 +3,18 @@
 Logboek bij `docs/eval.md`. Elke promptwijziging krijgt hier een regel, met
 promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
+## Wat er nog moet gebeuren
+
+Twee variabelen op de worker in Railway, en dan is `extract-v4` te meten:
+
+| Variabele | Nu | Moet worden | Waarom |
+|---|---|---|---|
+| `ANTHROPIC_EFFORT` | `medium` | `high` | Runs 4 en 5 zakken allebei op meeting 1. Zie hieronder. |
+| `EXTRACTION_PROMPT` | `extract-v3` | `extract-v4` | Staat vast op de deploy, dus de standaard in de code doet niets. Run 5 draaide daardoor per ongeluk v3. |
+
+`extract-v4` staat klaar in `packages/core/src/prompts` en is gedeployed. Zolang
+`EXTRACTION_PROMPT` op `extract-v3` staat wordt hij niet gebruikt.
+
 ## Heeft de sleutel drie besluiten gemist?
 
 Terechte vraag na run 3: meeting 2 leverde elf besluiten waar de sleutel er
@@ -29,6 +41,63 @@ waarop de knoop werd doorgehakt?".
 Wat de vraag wél opleverde: het derde punt hoorde in `open_vragen` te staan en
 stond in `besluiten` — met de juiste triagevraag ernaast. Dat is geen te ruime
 besluitgrens maar een verkeerde bak. De sleutel had het goed.
+
+## Run 5 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
+
+Bedoeld als eerste run van `extract-v4`, maar de worker draaide `extract-v3`:
+`EXTRACTION_PROMPT` staat vast op de deploy en overrulet de standaard uit
+`packages/core/src/config.ts`. Zie "Wat er nog moet gebeuren" onderaan.
+
+Daarmee is dit een **tweede meting van precies dezelfde instelling als run 4**,
+en dat is toevallig het nuttigste wat er nu kon gebeuren: het voorbehoud bij
+run 4 was dat één opname per instelling geen bewijs is.
+
+| | Meeting 1 | Meeting 2 |
+|---|---|---|
+| Outputtokens | 11.583 | 10.017 |
+| Duur | 116s | 104s |
+| Score | **16 van 23 ≈ 7,0** | **18 van 19 ≈ 9,5** |
+| Citaten letterlijk | **25 van 25** | **21 van 21** |
+| Verzonnen feiten | **0** | **0** |
+
+**Het voorbehoud vervalt: de uitkomst van run 4 is systematisch.** Meeting 1
+mist opnieuw exact dezelfde drie toezeggingen, en opnieuw niet in triage maar
+helemaal:
+
+- binding Oma's Stoofvlees verhogen
+- binding Thaise curry aanpassen
+- rode kool minder zuur maken
+
+Twee onafhankelijke runs, dezelfde drie gaten, allebei ruim onder de norm van 8.
+Dat is geen ruis. Wat wegvalt zijn steeds de productaanpassingen met 19 augustus
+als deadline — inhoudelijk de kern van die meeting.
+
+Er komt een tweede regressie bij: **de datumval is weer gezakt.** Run 5 legt
+22 augustus vast als hard cijfer én zet de dag in triage als onbesliste vraag.
+Precies de fout die run 2 maakte en run 3 had opgelost. Half goed is hier fout.
+
+Meeting 2 gaat de andere kant op en scoort met 9,5 het hoogst van alle geldige
+runs: alle zeven besluiten, alle vier de open vragen — inclusief de botsing
+tussen de twee kleursystemen, die geen enkele eerdere run vond — en alle drie de
+risico's. Er blijft één te ruim besluit staan, de rekenregel over het BLK-
+aandeel, en die staat tegelijk correct als open vraag. Dat is nog steeds het
+defect waar `extract-v4` op mikt, alleen niet meer vier keer maar één keer.
+
+### Wat dit samen met run 4 zegt
+
+De twee meetings reageren tegengesteld op minder denkbudget, consistent over
+twee runs:
+
+| | `high` (run 3) | `medium` (runs 4 en 5) |
+|---|---|---|
+| Meeting 1, gestructureerd? nee | 8,5 | 6,5 en 7,0 |
+| Meeting 2, gestructureerd? ja | 9,2 | 8,9 en 9,5 |
+
+Een overleg met duidelijke knopen wordt er beter van; minder denkbudget gaat
+vooral af van het uitweiden. Een terugkoppeling waarin losse punten langskomen
+wordt er slechter van, want die vindt je alleen door het hele stuk uit te kammen.
+
+De helft van je meetings is van het tweede soort. Daarom: `high`.
 
 ## Run 4 — 2026-08-16, extract-v3, claude-sonnet-5, effort `medium`
 
@@ -92,8 +161,9 @@ het uitkammen.
 wat dit systeem hoort te voorkomen. De besparing is echt, maar je koopt hem met
 de recall op het type meeting dat je het vaakst hebt.
 
-Wel een voorbehoud: dit is één opname per instelling, geen serie. Het verschil
-is groot en systematisch genoeg om op af te gaan, maar het is geen bewijs.
+Voorbehoud bij deze run: één opname per instelling is geen serie. Run 5 heeft
+datzelfde meetpunt herhaald en komt op hetzelfde uit, inclusief exact dezelfde
+drie gemiste toezeggingen. Daarmee vervalt het voorbehoud.
 
 ### Nieuwe bevinding
 
