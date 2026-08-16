@@ -56,6 +56,7 @@ export async function extractSource(
     userText: renderSource(source),
     kind: 'extractie',
     promptVersion: prompt.version,
+    promptFingerprint: prompt.fingerprint,
     sourceId: source.id,
   });
 
