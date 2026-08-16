@@ -46,6 +46,15 @@ export async function extractSource(
   if (!source) throw new Error(`bron ${sourceId} bestaat niet`);
   if (source.processedAt && !options.force) return null;
 
+  // Een opgeruimde bron opnieuw extraheren levert een lege extractie op die de
+  // bestaande overschrijft. Dat is erger dan niets doen, dus weiger het.
+  if (source.rawPurgedAt) {
+    throw new Error(
+      `bron ${sourceId} is opgeruimd op ${source.rawPurgedAt.toISOString().slice(0, 10)}; ` +
+        'de ruwe tekst is weg en een nieuwe extractie zou de bestaande vervangen door niets',
+    );
+  }
+
   const [prompt, context] = await Promise.all([loadPrompt(EXTRACTION_PROMPT), buildContext()]);
 
   const { text } = await callClaude({
@@ -125,7 +134,7 @@ function renderSource(source: SourceRow): string {
     source.summaryText?.trim() || '(geen samenvatting geleverd)',
     '',
     '# TRANSCRIPT',
-    source.rawText,
+    source.rawText ?? '(geen transcript)',
   );
 
   if (source.providerActions) {
