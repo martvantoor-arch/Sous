@@ -1,5 +1,6 @@
 // Drizzle-spiegel van db/schema.sql. Kolomnamen Engels, zoals afgesproken.
 // Migraties nooit met de hand: pas dit bestand aan en draai `pnpm db:generate`.
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   boolean,
   date,
@@ -33,6 +34,15 @@ export const people = pgTable('people', {
   isInternal: boolean('is_internal').notNull().default(true),
   /** ASR verhaspelingen en roepnamen */
   aliases: text('aliases').array().notNull().default(sql`'{}'`),
+  /**
+   * Aan wie deze persoon rapporteert. Zelfverwijzend, dus het organogram is
+   * gewoon deze kolom uitgelezen als boom.
+   *
+   * Niet alleen voor het plaatje: wie aan wie rapporteert is context die helpt
+   * bij het afleiden van eigenaarschap. "Dat pakt mijn team op" is pas te
+   * herleiden als bekend is wie er in dat team zit.
+   */
+  managerId: uuid('manager_id').references((): AnyPgColumn => people.id),
   active: boolean('active').notNull().default(true),
   createdAt: createdAt(),
 });
@@ -62,6 +72,48 @@ export const terms = pgTable('terms', {
   variants: text('variants').array().notNull().default(sql`'{}'`),
   note: text('note'),
 });
+
+// -------------------------------------------------------------------- login
+
+/**
+ * Eenmalige inloglinks. We bewaren nooit de link zelf maar alleen een hash
+ * ervan: wie de database leest kan er dan geen geldige link uit terugbouwen.
+ *
+ * Een token is één keer bruikbaar (`usedAt`) en verloopt (`expiresAt`). Beide
+ * zijn nodig: zonder eenmaligheid blijft een link uit een oude mailbox werken,
+ * zonder verlooptijd blijft een nooit gebruikte link eeuwig geldig.
+ */
+export const loginTokens = pgTable(
+  'login_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('login_tokens_email_idx').on(t.email, t.createdAt)],
+);
+
+/**
+ * Actieve sessies. Ook hier alleen de hash van het cookie, om dezelfde reden.
+ * Een rij verwijderen is uitloggen; alle rijen verwijderen is iedereen uitloggen,
+ * en dat is precies wat je wilt kunnen als er ooit iets uitlekt.
+ */
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('auth_sessions_email_idx').on(t.email, t.createdAt)],
+);
 
 // ------------------------------------------------------------------- bronnen
 

@@ -5,6 +5,17 @@ promptversie en model erbij. Zonder dit verbeter je op gevoel.
 
 ## Wat er nog moet gebeuren
 
+**De ruwe transcripten zijn opgeruimd (16 augustus 2026).** Zeventien bronnen
+geleegd: de twee echte opnames en vijftien evaluatiekopieen ervan. De extracties
+staan volledig overeind, maar `verify-quotes` kan die bronnen niet meer toetsen
+en ze zijn niet opnieuw te extraheren.
+
+Voor de evaluatieset maakt dat niets uit: die draait op de fixtures in
+`eval/fixtures/`, buiten de database. Een volgende run zet ze gewoon opnieuw via
+de webhook binnen. Wat je kwijt bent is de mogelijkheid om een *oude* run
+achteraf op citaten te controleren; doe die controle dus in dezelfde sessie als
+de run zelf.
+
 1. **`ANTHROPIC_EFFORT` op `high` houden.** Runs 4 en 5 draaiden op `medium` en
    zakken allebei op meeting 1. Vanaf run 6 staat hij weer op `high`; dat is de
    juiste stand.
@@ -22,16 +33,15 @@ niet te stunten met de prijs en de heroverweging van de fotografie van het
 stoofvlees door geen enkele versie ooit gevonden. Kijk daarbij eerst of de
 sleutel die twee wel scherp genoeg opschrijft.
 
-`EXTRACTION_PROMPT` is er niet, en dat hoort ook niet. De standaard in
-`packages/core/src/config.ts` bepaalt de promptversie, en die staat op
-`extract-v4`. Run 5 draaide toch nog v3 omdat de worker op dat moment een build
-van vóór die commit draaide.
+`EXTRACTION_PROMPT` is er niet als variabele, en dat hoort ook niet. De standaard
+in `packages/core/src/config.ts` bepaalt de promptversie, en die staat op
+`extract-v5`.
 
 **Let op bij het loggen van een run.** De promptversie volgt uit de code, dus
-tussen pushen en meten zit een deploy. Kijk altijd eerst welke `promptVersie`
-er in de extractie staat voordat je een run als meting van een nieuwe versie
-opschrijft — anders schrijf je de verkeerde versie in dit logboek. Zo is run 5
-ontstaan.
+tussen pushen en meten zit een deploy. Run 5 draaide nog v3 terwijl de commit met
+v4 al gepusht was, en dat heb ik toen als een v4-meting willen opschrijven.
+Sinds `20dcdcf` logt elke call een vingerafdruk van de systeemprompt; kijk daar
+naar, niet naar wat je verwacht dat er draait.
 
 ## Heeft de sleutel drie besluiten gemist?
 
