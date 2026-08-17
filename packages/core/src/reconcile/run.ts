@@ -415,8 +415,14 @@ async function verwerkAfronding(
 
   const nu = new Date();
   const citaat = koppeling?.citaat || afronding.bewijs_citaat || null;
-  const sluit =
-    (uitkomst === 'afgerond' || uitkomst === 'vervallen') && afronding.type === 'expliciet';
+  const wilAfsluiten = uitkomst === 'afgerond' || uitkomst === 'vervallen';
+  const sluit = wilAfsluiten && afronding.type === 'expliciet';
+
+  // `zelfde` op een afronding betekent: dit punt kwam langs, er is niets aan
+  // veranderd. Dat is een levensteken, geen wijziging — precies zoals bij een
+  // toezegging. Hem toch op `bijgewerkt` zetten zou nieuws suggereren dat er
+  // niet is.
+  const nieuweStatus = sluit ? uitkomst : uitkomst === 'zelfde' ? voor.status : 'bijgewerkt';
 
   await tx
     .update(commitments)
@@ -425,7 +431,8 @@ async function verwerkAfronding(
       lastSeenAt: nu,
       statusSource: 'meeting',
       statusConf: (koppeling?.confidence ?? 0.5).toFixed(2),
-      status: sluit ? uitkomst : 'bijgewerkt',
+      // Was hij stil geworden, dan leeft hij weer.
+      status: nieuweStatus === 'stil' ? 'open' : nieuweStatus,
       ...(sluit ? { closedAt: nu, closedQuote: citaat } : {}),
     })
     .where(eq(commitments.id, bestaandId));
@@ -433,6 +440,11 @@ async function verwerkAfronding(
   if (sluit) {
     telling[uitkomst === 'afgerond' ? 'afgerond' : 'vervallen'] += 1;
     await noteer(tx, bestaandId, 'status', voor.status, uitkomst, sourceId, citaat);
+  } else if (uitkomst === 'zelfde') {
+    telling.opnieuwGenoemd += 1;
+    if (voor.status === 'stil') {
+      await noteer(tx, bestaandId, 'status', 'stil', 'open', sourceId, citaat);
+    }
   } else {
     telling.bijgewerkt += 1;
     await noteer(
@@ -448,7 +460,7 @@ async function verwerkAfronding(
 
   // Wilde het model afsluiten op niet meer dan een beweging, dan is dat geen
   // detail dat je in een logregel wegstopt.
-  if (!sluit && (uitkomst === 'afgerond' || uitkomst === 'vervallen')) {
+  if (wilAfsluiten && !sluit) {
     await tx.insert(triageQueue).values({
       sourceId,
       kind: 'toezegging',
