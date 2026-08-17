@@ -2,7 +2,20 @@
 // doorheen; wat er niet doorheen komt, komt de database niet in.
 import { z } from 'zod';
 
-export const uitkomsten = ['nieuw', 'zelfde', 'bijgewerkt', 'afgerond', 'vervallen'] as const;
+/**
+ * `geen_match` hoort alleen bij een afronding: iets is afgerond wat niet in het
+ * geheugen staat. Er valt dan niets af te sluiten en er hoort ook niets te
+ * ontstaan — een afronding die als toezegging binnenkomt zou een afgevinkt punt
+ * alsnog op de lijst zetten.
+ */
+export const uitkomsten = [
+  'nieuw',
+  'zelfde',
+  'bijgewerkt',
+  'afgerond',
+  'vervallen',
+  'geen_match',
+] as const;
 export type Uitkomst = (typeof uitkomsten)[number];
 
 const leegNaarNull = <T extends z.ZodTypeAny>(schema: T) =>
@@ -25,10 +38,16 @@ export const reconciliatieSchema = z.object({
 export type Koppeling = z.infer<typeof koppelingSchema>;
 export type Reconciliatie = z.infer<typeof reconciliatieSchema>;
 
+/** Uitkomsten die zonder `bestaand_id` betekenisloos zijn. */
+const verwijstNaarBestaand = (u: Uitkomst) => u !== 'nieuw' && u !== 'geen_match';
+
 /**
  * Een uitkomst die naar een bestaande toezegging verwijst zonder id is
  * onbruikbaar. In plaats van de hele pass te laten omvallen degraderen we hem
  * naar `nieuw`: een dubbele toezegging is te herstellen, een verdwenen niet.
+ *
+ * Voor een afronding pakt dat anders uit — daar wordt `nieuw` verderop alsnog
+ * `geen_match`, want een afronding hoort nooit een toezegging aan te maken.
  */
 export function parseReconciliatie(tekst: string): Reconciliatie {
   const schoon = tekst
@@ -40,7 +59,7 @@ export function parseReconciliatie(tekst: string): Reconciliatie {
 
   return {
     koppelingen: ruw.koppelingen.map((k) =>
-      k.uitkomst !== 'nieuw' && !k.bestaand_id
+      verwijstNaarBestaand(k.uitkomst) && !k.bestaand_id
         ? {
             ...k,
             uitkomst: 'nieuw' as const,

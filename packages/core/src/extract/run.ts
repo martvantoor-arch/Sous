@@ -114,7 +114,8 @@ export async function persistExtraction(
   // Pas hierna het geheugen bijwerken. De reconciliatie roept Claude aan en mag
   // de transactie hierboven niet openhouden; en als hij omvalt staat de ruwe
   // extractie in elk geval veilig opgeslagen.
-  await materialiseer(source.id, result);
+  const telling = await materialiseer(source.id, result);
+  console.log(`[extractie] ${source.id} gematerialiseerd:`, JSON.stringify(telling));
 
   return { sourceId: source.id, extractionId, result };
 }

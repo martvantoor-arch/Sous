@@ -4,7 +4,8 @@ Aparte set naast `docs/eval.md`, want hij meet iets anders. De extractieset
 vraagt: haalt het model uit één bron wat erin zit? Deze set vraagt: herkent het
 systeem dat een toezegging uit een láter gesprek over een bestaande gaat?
 
-Draai deze set bij elke wijziging aan `reconcile-v1` of aan de stilteregel.
+Draai deze set bij elke wijziging aan de reconciliatieprompt of aan de
+stilteregel.
 
 ## Waarom er een verzonnen meeting in zit
 
@@ -99,3 +100,46 @@ horen op `stil` te staan, en verder niets uit de derde bron.
 - minimaal 8 van de 10 bestaande punten met de juiste uitkomst
 - beide nieuwe toezeggingen opgenomen
 - precies de twee niet-genoemde punten als stil gemarkeerd
+
+## Runs
+
+### Run 1 — 17 augustus, reconcile-v1, extract-v5
+
+Meeting 1 binnengehaald (13 openstaande toezeggingen), daarna de synthetische
+bron van 26 augustus. Uitkomst: 16 toezeggingen, `{open: 13, bijgewerkt: 2,
+vervallen: 1}`.
+
+**7 van de 10 goed. Nul ten onrechte afgesloten — de harde eis gehaald.** Beide
+nieuwe toezeggingen opgenomen. De drie valkuilen die het meest telden gingen
+goed: punt 3 en 7 bleven `bijgewerkt` (vooruitgang is geen afronding), punt 5
+werd `vervallen` en niet `afgerond`, en de twee bindingen zijn niet op elkaar
+gematcht.
+
+De drie fouten waren alle drie hetzelfde soort fout: punt 1, 2 en 6 hoorden
+`afgerond` te zijn en bleven `open`.
+
+**Oorzaak: de code, niet de prompt.** De extractie had ze alle drie correct
+herkend, met citaat en al:
+
+```
+AFRONDINGEN:
+  - Binding van Oma's Stoofvlees aangepast en goedgekeurd | expliciet
+      "Ja, die is klaar. Daar hoeven we niks meer aan te doen."
+  - Feedback van de keuring delen per mail | expliciet
+      "Die heb ik vorige week vrijdag gemaild. Die is de deur uit."
+  - Voorstel promotionele ondersteuning versturen | expliciet
+      "Die is ook verstuurd. Zelfde mail eigenlijk."
+```
+
+Maar `materialiseer()` las alleen `result.toezeggingen` en gaf alleen die lijst
+aan de reconciliatie mee. `result.afrondingen` werd nergens gelezen. Het bewijs
+van afronding lag klaar en werd weggegooid.
+
+Dat is logisch te verklaren en daarom leerzaam: een afgeronde toezegging wordt in
+een gesprek niet als toezegging genoemd. "Die heb ik vrijdag gemaild" is geen
+belofte. De extractie zet zo'n zin dus terecht in `afrondingen` — en precies
+daardoor kwam hij nooit bij de pass aan die er iets mee kon.
+
+Hieruit volgt `reconcile-v2` (afrondingen gaan mee, met `soort` en `type`, plus
+een `geen_match`-uitkomst voor een afronding die nergens bij hoort) en de
+codewijziging die beide lijsten achter elkaar aanbiedt.

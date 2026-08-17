@@ -36,7 +36,7 @@ import { loadPrompt } from '../prompts.js';
 import type { Extraction } from '../extract/schema.js';
 import { parseReconciliatie, type Koppeling } from './schema.js';
 
-const RECONCILE_PROMPT = 'reconcile-v1';
+const RECONCILE_PROMPT = 'reconcile-v2';
 
 export interface ReconciliatieResultaat {
   nieuweToezeggingen: number;
@@ -44,6 +44,8 @@ export interface ReconciliatieResultaat {
   afgerond: number;
   vervallen: number;
   opnieuwGenoemd: number;
+  /** Afrondingen die nergens bij hoorden. Er viel niets af te sluiten. */
+  afrondingenZonderMatch: number;
   besluiten: number;
   openVragen: number;
   risicos: number;
@@ -84,6 +86,7 @@ export async function materialiseer(
       afgerond: 0,
       vervallen: 0,
       opnieuwGenoemd: 0,
+      afrondingenZonderMatch: 0,
       besluiten: result.besluiten.length,
       openVragen: result.open_vragen.length,
       risicos: result.risicos.length,
@@ -133,9 +136,16 @@ export async function materialiseer(
       });
     }
 
+    // De indexen lopen door over beide lijsten heen: eerst de toezeggingen,
+    // daarna de afrondingen. Zie `bouwInvoer()`, die ze in dezelfde volgorde
+    // aan het model aanbiedt.
     for (const [index, t] of result.toezeggingen.entries()) {
-      const koppeling = koppelingen.get(index);
-      await verwerkToezegging(tx, sourceId, t, koppeling, telling);
+      await verwerkToezegging(tx, sourceId, t, koppelingen.get(index), telling);
+    }
+
+    for (const [index, a] of result.afrondingen.entries()) {
+      const koppeling = koppelingen.get(result.toezeggingen.length + index);
+      await verwerkAfronding(tx, sourceId, a, koppeling, telling);
     }
 
     return telling;
@@ -143,6 +153,7 @@ export async function materialiseer(
 }
 
 type ToezeggingUitExtractie = Extraction['toezeggingen'][number];
+type AfrondingUitExtractie = Extraction['afrondingen'][number];
 type OpenToezegging = { id: string; what: string; ownerRaw: string | null; deadline: string | null };
 
 async function openstaandeToezeggingen(db: DbOrTx): Promise<OpenToezegging[]> {
@@ -158,24 +169,32 @@ async function openstaandeToezeggingen(db: DbOrTx): Promise<OpenToezegging[]> {
 }
 
 /**
- * Vraagt het model welke nieuwe toezeggingen over bestaande gaan.
+ * Zet beide lijsten uit de bron achter elkaar in één genummerde reeks.
  *
- * Slaat de call over als er nog niets in het geheugen staat of als de bron geen
- * toezeggingen opleverde — dan valt er niets te matchen en is alles nieuw.
- * Faalt de call, dan is alles nieuw: een dubbele toezegging is te herstellen,
- * een verdwenen niet.
+ * Toezeggingen eerst, afrondingen daarna, zodat de index in het antwoord
+ * eenduidig terug te rekenen is. Afrondingen moeten mee: een afgeronde
+ * toezegging wordt in een gesprek niet als toezegging genoemd — "die heb ik
+ * vrijdag gemaild" is een afronding, en die belandt dus in `afrondingen`. Liet
+ * je die lijst weg, dan zag deze pass het bewijs van afronding nooit.
  */
-async function reconcilieer(
-  sourceId: string,
-  openstaand: OpenToezegging[],
-  result: Extraction,
-): Promise<Map<number, Koppeling>> {
-  const leeg = new Map<number, Koppeling>();
-  if (openstaand.length === 0 || result.toezeggingen.length === 0) return leeg;
+function bouwInvoer(openstaand: OpenToezegging[], result: Extraction): string {
+  const nieuw = [
+    ...result.toezeggingen.map((t) => ({
+      soort: 'toezegging' as const,
+      wat: t.wat,
+      owner_raw: t.owner_raw,
+      deadline_raw: t.deadline_raw,
+      citaat: t.citaat,
+    })),
+    ...result.afrondingen.map((a) => ({
+      soort: 'afronding' as const,
+      type: a.type,
+      wat: a.beschrijving_bestaand_punt,
+      citaat: a.bewijs_citaat,
+    })),
+  ].map((punt, index) => ({ index, ...punt }));
 
-  const prompt = await loadPrompt(RECONCILE_PROMPT);
-
-  const invoer = [
+  return [
     '# AL IN HET GEHEUGEN',
     JSON.stringify(
       openstaand.map((t) => ({
@@ -189,18 +208,29 @@ async function reconcilieer(
     ),
     '',
     '# NIEUW UIT DEZE BRON',
-    JSON.stringify(
-      result.toezeggingen.map((t, i) => ({
-        index: i,
-        wat: t.wat,
-        owner_raw: t.owner_raw,
-        deadline_raw: t.deadline_raw,
-        citaat: t.citaat,
-      })),
-      null,
-      2,
-    ),
+    JSON.stringify(nieuw, null, 2),
   ].join('\n');
+}
+
+/**
+ * Vraagt het model welke punten uit deze bron over bestaande toezeggingen gaan.
+ *
+ * Slaat de call over als er nog niets in het geheugen staat of als de bron geen
+ * toezeggingen en geen afrondingen opleverde — dan valt er niets te matchen en
+ * is alles nieuw. Faalt de call, dan is alles nieuw: een dubbele toezegging is
+ * te herstellen, een verdwenen niet.
+ */
+async function reconcilieer(
+  sourceId: string,
+  openstaand: OpenToezegging[],
+  result: Extraction,
+): Promise<Map<number, Koppeling>> {
+  const leeg = new Map<number, Koppeling>();
+  const aangeboden = result.toezeggingen.length + result.afrondingen.length;
+  if (openstaand.length === 0 || aangeboden === 0) return leeg;
+
+  const prompt = await loadPrompt(RECONCILE_PROMPT);
+  const invoer = bouwInvoer(openstaand, result);
 
   try {
     const { text } = await callClaude({
@@ -234,7 +264,11 @@ async function verwerkToezegging(
   telling: ReconciliatieResultaat,
 ): Promise<void> {
   const nu = new Date();
-  const uitkomst = koppeling?.uitkomst ?? 'nieuw';
+  // `geen_match` is bedoeld voor afrondingen. Kiest het model hem toch voor een
+  // toezegging, dan nemen we hem als nieuw op: hem laten vallen zou een echte
+  // toezegging uit het geheugen houden.
+  const gekozen = koppeling?.uitkomst ?? 'nieuw';
+  const uitkomst = gekozen === 'geen_match' ? 'nieuw' : gekozen;
 
   if (uitkomst === 'nieuw' || !koppeling?.bestaand_id) {
     const [rij] = await tx
@@ -340,6 +374,89 @@ async function verwerkToezegging(
     if (voor.status === 'stil') {
       await noteer(tx, bestaandId, 'status', 'stil', 'open', sourceId, koppeling.citaat);
     }
+  }
+
+  await eventueelTriage(tx, sourceId, koppeling, voor.what);
+}
+
+/**
+ * Verwerkt een afronding uit de bron.
+ *
+ * Het grote verschil met een toezegging: hier ontstaat nooit iets. Vindt het
+ * model geen bestaande toezegging, dan valt de afronding weg. Zou hij als nieuwe
+ * toezegging binnenkomen, dan zette een afgevinkt punt zichzelf alsnog op de
+ * lijst — precies andersom dan bedoeld.
+ *
+ * En afsluiten mag alleen op `type: 'expliciet'`. Een `beweging` is een update
+ * ("dat loopt", "die komt volgende week"); dat is kernprincipe 4 — nooit
+ * stilzwijgend sluiten. De prompt zegt dat ook, maar deze regel is te belangrijk
+ * om alleen aan het model over te laten.
+ */
+async function verwerkAfronding(
+  tx: DbOrTx,
+  sourceId: string,
+  afronding: AfrondingUitExtractie,
+  koppeling: Koppeling | undefined,
+  telling: ReconciliatieResultaat,
+): Promise<void> {
+  const bestaandId = koppeling?.bestaand_id;
+  const uitkomst = koppeling?.uitkomst ?? 'geen_match';
+
+  if (!bestaandId || uitkomst === 'geen_match' || uitkomst === 'nieuw') {
+    telling.afrondingenZonderMatch += 1;
+    return;
+  }
+
+  const [voor] = await tx.select().from(commitments).where(eq(commitments.id, bestaandId));
+  if (!voor) {
+    telling.afrondingenZonderMatch += 1;
+    return;
+  }
+
+  const nu = new Date();
+  const citaat = koppeling?.citaat || afronding.bewijs_citaat || null;
+  const sluit =
+    (uitkomst === 'afgerond' || uitkomst === 'vervallen') && afronding.type === 'expliciet';
+
+  await tx
+    .update(commitments)
+    .set({
+      lastSeenSource: sourceId,
+      lastSeenAt: nu,
+      statusSource: 'meeting',
+      statusConf: (koppeling?.confidence ?? 0.5).toFixed(2),
+      status: sluit ? uitkomst : 'bijgewerkt',
+      ...(sluit ? { closedAt: nu, closedQuote: citaat } : {}),
+    })
+    .where(eq(commitments.id, bestaandId));
+
+  if (sluit) {
+    telling[uitkomst === 'afgerond' ? 'afgerond' : 'vervallen'] += 1;
+    await noteer(tx, bestaandId, 'status', voor.status, uitkomst, sourceId, citaat);
+  } else {
+    telling.bijgewerkt += 1;
+    await noteer(
+      tx,
+      bestaandId,
+      'bijgewerkt',
+      voor.what,
+      koppeling?.wijziging ?? afronding.beschrijving_bestaand_punt,
+      sourceId,
+      citaat,
+    );
+  }
+
+  // Wilde het model afsluiten op niet meer dan een beweging, dan is dat geen
+  // detail dat je in een logregel wegstopt.
+  if (!sluit && (uitkomst === 'afgerond' || uitkomst === 'vervallen')) {
+    await tx.insert(triageQueue).values({
+      sourceId,
+      kind: 'toezegging',
+      proposal: { wat: voor.what, uitkomst, bestaand_id: bestaandId },
+      question: `De reconciliatie wilde deze op "${uitkomst}" zetten, maar de bron geeft alleen een beweging, geen expliciete afronding. Op bijgewerkt gelaten. Is hij klaar?`,
+      confidence: (koppeling?.confidence ?? 0.5).toFixed(2),
+    });
+    return;
   }
 
   await eventueelTriage(tx, sourceId, koppeling, voor.what);
