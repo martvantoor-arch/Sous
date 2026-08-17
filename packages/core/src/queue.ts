@@ -18,7 +18,15 @@ export function getBoss(): Promise<PgBoss> {
       const url = process.env.DATABASE_URL;
       if (!url) throw new Error('DATABASE_URL ontbreekt');
       const instance = new PgBoss({ connectionString: url, schema: 'pgboss' });
-      instance.on('error', (err) => console.error('[pg-boss]', err));
+      // Alleen de kern loggen. pg-boss geeft bij een verbroken verbinding het
+      // hele Client-object mee, en dat is honderd regels waarin een echte fout
+      // onzichtbaar wordt. Een verbroken idle verbinding is bovendien normaal:
+      // de pool maakt hem opnieuw aan en het werk loopt door.
+      instance.on('error', (err) => {
+        const bericht = err instanceof Error ? err.message : String(err);
+        const code = (err as { code?: string })?.code;
+        console.error(`[pg-boss] ${bericht}${code ? ` (${code})` : ''}`);
+      });
       await instance.start();
       await instance.createQueue(EXTRACT_QUEUE);
       boss = instance;
