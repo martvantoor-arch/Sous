@@ -1,6 +1,16 @@
 // Verwerkingsservice. Draait los van de web service zodat een lange extractie
 // nooit een webhook laat aflopen.
-import { EXTRACT_QUEUE, extractSource, getBoss, stopBoss, type ExtractJob } from '@meetinghub/core';
+import {
+  EXTRACT_QUEUE,
+  STILTE_QUEUE,
+  extractSource,
+  getBoss,
+  markeerStilteNa,
+  plangStilte,
+  stopBoss,
+  type ExtractJob,
+  type StilteJob,
+} from '@meetinghub/core';
 import { provision } from '@meetinghub/db';
 import { requireEnv } from './env.js';
 
@@ -49,7 +59,17 @@ await boss.work<ExtractJob>(EXTRACT_QUEUE, { batchSize: 1 }, async ([job]) => {
   );
 });
 
-console.log(`worker luistert op ${EXTRACT_QUEUE}`);
+// De stilteregel. Geen model, geen wachtrij vol werk: één update-statement dat
+// zichtbaar maakt wat al een tijd niet meer genoemd is. Sluit niets af.
+await boss.work<StilteJob>(STILTE_QUEUE, { batchSize: 1 }, async ([job]) => {
+  const dagen = job?.data?.dagen ?? 21;
+  const aantal = await markeerStilteNa(dagen);
+  console.log(`[stilte] ${aantal} toezegging(en) stil na ${dagen} dagen`);
+});
+
+await plangStilte();
+
+console.log(`worker luistert op ${EXTRACT_QUEUE} en ${STILTE_QUEUE}, stilte staat op 06:00`);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

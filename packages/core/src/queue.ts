@@ -2,10 +2,15 @@
 import PgBoss from 'pg-boss';
 
 export const EXTRACT_QUEUE = 'source.extract';
+export const STILTE_QUEUE = 'commitments.stilte';
 
 export interface ExtractJob {
   sourceId: string;
   force?: boolean;
+}
+
+export interface StilteJob {
+  dagen: number;
 }
 
 let boss: PgBoss | undefined;
@@ -29,6 +34,7 @@ export function getBoss(): Promise<PgBoss> {
       });
       await instance.start();
       await instance.createQueue(EXTRACT_QUEUE);
+      await instance.createQueue(STILTE_QUEUE);
       boss = instance;
       return instance;
     })();
@@ -56,6 +62,29 @@ export async function enqueueExtraction(job: ExtractJob): Promise<string | null>
     expireInMinutes: JOB_EXPIRY_MINUTES,
     retryLimit: 3,
     retryBackoff: true,
+  });
+}
+
+/**
+ * Zet de stilteregel op een dagelijkse afspraak.
+ *
+ * pg-boss heeft zijn eigen planner op dezelfde Postgres, dus hier komt geen
+ * losse cron-service bij: één minder ding dat stil kan uitvallen zonder dat
+ * iemand het merkt. De afspraak staat in de database, dus een deploy die
+ * omvalt laat hem staan.
+ *
+ * Zes uur 's ochtends Amsterdamse tijd, dus vóór het ochtendgesprek. Wat er
+ * stil geworden is hoort al op tafel te liggen als Marten gaat kijken, niet
+ * halverwege de dag te verschijnen.
+ *
+ * `schedule()` is een upsert op de wachtrijnaam: elke deploy zet dezelfde
+ * afspraak opnieuw, en er ontstaat er nooit een tweede.
+ */
+export async function plangStilte(dagen = 21): Promise<void> {
+  const instance = await getBoss();
+  await instance.schedule(STILTE_QUEUE, '0 6 * * *', { dagen } satisfies StilteJob, {
+    tz: 'Europe/Amsterdam',
+    singletonKey: STILTE_QUEUE,
   });
 }
 

@@ -4,7 +4,8 @@ Aparte set naast `docs/eval.md`, want hij meet iets anders. De extractieset
 vraagt: haalt het model uit één bron wat erin zit? Deze set vraagt: herkent het
 systeem dat een toezegging uit een láter gesprek over een bestaande gaat?
 
-Draai deze set bij elke wijziging aan `reconcile-v1` of aan de stilteregel.
+Draai deze set bij elke wijziging aan de reconciliatieprompt of aan de
+stilteregel.
 
 ## Waarom er een verzonnen meeting in zit
 
@@ -38,8 +39,12 @@ Tot dan is dit beter dan niets meten.
    een geheugen.
 2. De synthetische bron van 26 augustus binnenhalen. Die triggert de
    reconciliatie.
-3. Toezeggingen teruglezen via `GET /api/toezeggingen`.
-4. Daarna de stilteregel draaien met een korte drempel.
+3. **Eerst de promptversie controleren, dan pas scoren.** `GET /api/bronnen/{id}`
+   geeft per call `promptVersie` en `promptVingerafdruk`. Staat daar niet de
+   versie die je dacht te meten, dan meet je de vorige deploy en is de uitkomst
+   waardeloos. Zie run 2 en 3 hieronder: dat is geen theoretisch risico.
+4. Toezeggingen teruglezen via `GET /api/toezeggingen`.
+5. Daarna de stilteregel draaien met een korte drempel.
 
 ## Wat eruit moet komen
 
@@ -93,9 +98,96 @@ Per uitkomst tellen:
 En daarna, na het draaien van de stilteregel met drempel 1 dag: punt 8 en 9
 horen op `stil` te staan, en verder niets uit de derde bron.
 
+### De stilteregel apart
+
+De regel zelf staat los gemeten in `apps/worker/src/eval-stilte.ts`:
+
+```
+node dist/eval-stilte.js
+```
+
+Dat is geen modelmeting maar een controle op SQL, en hij hoort dus altijd te
+slagen — niet meestal. Acht gevallen, waaronder de drie die er echt toe doen:
+een afgesloten toezegging wordt niet heropend, de regel sluit zelf niets af, en
+een toezegging die nooit een levensteken kreeg valt alsnog op via `createdAt`.
+Twee keer draaien levert de tweede keer niets op.
+
+De testrijen dragen een marker en worden alleen op die marker opgeruimd, dus het
+script vernietigt niets als het per ongeluk tegen de echte database draait.
+
+Deze splitsing is er omdat de reconciliatieset via HTTP gedraaid wordt en de
+stilteregel een drempel in dágen heeft: alles wat je zojuist hebt ingeladen is
+per definitie vers. De regel deterministisch meten hoort dus bij de database,
+niet bij de bron.
+
 ## Slaagnorm
 
 - **nul ten onrechte afgesloten toezeggingen** — harde eis
 - minimaal 8 van de 10 bestaande punten met de juiste uitkomst
 - beide nieuwe toezeggingen opgenomen
 - precies de twee niet-genoemde punten als stil gemarkeerd
+
+## Runs
+
+### Run 1 — 17 augustus, reconcile-v1, extract-v5
+
+Meeting 1 binnengehaald (13 openstaande toezeggingen), daarna de synthetische
+bron van 26 augustus. Uitkomst: 16 toezeggingen, `{open: 13, bijgewerkt: 2,
+vervallen: 1}`.
+
+**7 van de 10 goed. Nul ten onrechte afgesloten — de harde eis gehaald.** Beide
+nieuwe toezeggingen opgenomen. De drie valkuilen die het meest telden gingen
+goed: punt 3 en 7 bleven `bijgewerkt` (vooruitgang is geen afronding), punt 5
+werd `vervallen` en niet `afgerond`, en de twee bindingen zijn niet op elkaar
+gematcht.
+
+De drie fouten waren alle drie hetzelfde soort fout: punt 1, 2 en 6 hoorden
+`afgerond` te zijn en bleven `open`.
+
+**Oorzaak: de code, niet de prompt.** De extractie had ze alle drie correct
+herkend, met citaat en al:
+
+```
+AFRONDINGEN:
+  - Binding van Oma's Stoofvlees aangepast en goedgekeurd | expliciet
+      "Ja, die is klaar. Daar hoeven we niks meer aan te doen."
+  - Feedback van de keuring delen per mail | expliciet
+      "Die heb ik vorige week vrijdag gemaild. Die is de deur uit."
+  - Voorstel promotionele ondersteuning versturen | expliciet
+      "Die is ook verstuurd. Zelfde mail eigenlijk."
+```
+
+Maar `materialiseer()` las alleen `result.toezeggingen` en gaf alleen die lijst
+aan de reconciliatie mee. `result.afrondingen` werd nergens gelezen. Het bewijs
+van afronding lag klaar en werd weggegooid.
+
+Dat is logisch te verklaren en daarom leerzaam: een afgeronde toezegging wordt in
+een gesprek niet als toezegging genoemd. "Die heb ik vrijdag gemaild" is geen
+belofte. De extractie zet zo'n zin dus terecht in `afrondingen` — en precies
+daardoor kwam hij nooit bij de pass aan die er iets mee kon.
+
+Hieruit volgt `reconcile-v2` (afrondingen gaan mee, met `soort` en `type`, plus
+een `geen_match`-uitkomst voor een afronding die nergens bij hoort) en de
+codewijziging die beide lijsten achter elkaar aanbiedt.
+
+### Run 2 en 3 — ongeldig, oude deploy
+
+Allebei gedraaid ná het pushen van `reconcile-v2`, allebei toch met
+`reconcile-v1`. Reden: Railway bouwt van `main`, en `main` stond nog op de
+merge daarvóór. Een push naar de werkbranch verandert dus niets aan wat er
+draait.
+
+Run 2 leverde geen enkele statuswijziging op — logisch, want v1 had zijn werk in
+run 1 al gedaan en de drie afrondingen zag hij nog steeds niet. Run 3 deed er een
+dubbele toezegging bij: "Navraag doen bij leverancier van de concurrent over
+snijwijze" naast de al bestaande "Navragen welke vleesleverancier de concurrent
+(Jumbo) gebruikt". Dat is v1-gedrag op een database die al gevuld was, geen
+uitspraak over v2.
+
+**Wat dit leert over de methode, niet over de prompt:** de promptversie staat per
+call in de database, en dat is precies waarvoor. Zonder die kolom had hier een
+meting van de oude code als resultaat van de nieuwe in dit logboek gestaan.
+Controleer hem vóór het scoren, niet erna.
+
+De teller staat nu op 17 toezeggingen, waarvan één dubbel. Die vervuiling hoort
+bij deze twee runs; een echte v2-meting hoort op een schone database.

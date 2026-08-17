@@ -24,8 +24,11 @@ export {
 export { EXTRACTION_MODEL } from './config.js';
 export {
   EXTRACT_QUEUE,
+  STILTE_QUEUE,
   enqueueExtraction,
   getBoss,
+  plangStilte,
   stopBoss,
   type ExtractJob,
+  type StilteJob,
 } from './queue.js';
