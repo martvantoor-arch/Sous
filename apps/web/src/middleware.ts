@@ -19,12 +19,14 @@ const SESSIE_COOKIE = 'meetinghub_sessie';
  * - `/login` en `/login/verifieer` — daar kom je nog binnen zonder sessie.
  * - `/api/ingest/pocket` — Pocket kan niet inloggen; die route controleert een
  *   HMAC-handtekening over de body, wat sterker is dan een sessiecookie.
- * - `/api/bronnen` — leest af achter een bearer-token, voor de evaluatieruns.
+ * - `/api/bronnen` en `/api/toezeggingen` — lezen af achter een bearer-token,
+ *   voor de evaluatieruns. Alleen lezen, en zonder token bestaan ze niet.
  */
 const OPEN: RegExp[] = [
   /^\/login(\/|$)/,
   /^\/api\/ingest\/pocket$/,
   /^\/api\/bronnen\//,
+  /^\/api\/toezeggingen$/,
 ];
 
 export function middleware(request: NextRequest) {

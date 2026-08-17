@@ -19,6 +19,7 @@ import {
   EXTRACTION_PROMPT,
 } from '../config.js';
 import { loadPrompt } from '../prompts.js';
+import { materialiseer } from '../reconcile/run.js';
 import { buildContext } from './context.js';
 import { parseExtraction, type Extraction } from './schema.js';
 
@@ -109,6 +110,11 @@ export async function persistExtraction(
     await queueProposals(tx, source, result);
     return row!.id;
   });
+
+  // Pas hierna het geheugen bijwerken. De reconciliatie roept Claude aan en mag
+  // de transactie hierboven niet openhouden; en als hij omvalt staat de ruwe
+  // extractie in elk geval veilig opgeslagen.
+  await materialiseer(source.id, result);
 
   return { sourceId: source.id, extractionId, result };
 }

@@ -28,6 +28,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/" className="hover:text-stone-900 dark:hover:text-stone-100">
                 Bronnen
               </Link>
+              <Link href="/opvolging" className="hover:text-stone-900 dark:hover:text-stone-100">
+                Opvolging
+              </Link>
               <Link href="/triage" className="hover:text-stone-900 dark:hover:text-stone-100">
                 Triage
               </Link>

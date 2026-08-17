@@ -4,6 +4,11 @@ export { buildContext } from './extract/context.js';
 export { loadPrompt, type PromptVersion } from './prompts.js';
 export { resolveTriage, type TriageBesluit, type TriageUitkomst } from './triage.js';
 export {
+  materialiseer,
+  markeerStilteNa,
+  type ReconciliatieResultaat,
+} from './reconcile/run.js';
+export {
   maakPersoon,
   wijzigPersoon,
   zetPersoonActief,
