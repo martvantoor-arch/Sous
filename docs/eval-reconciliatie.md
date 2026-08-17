@@ -94,6 +94,28 @@ Per uitkomst tellen:
 En daarna, na het draaien van de stilteregel met drempel 1 dag: punt 8 en 9
 horen op `stil` te staan, en verder niets uit de derde bron.
 
+### De stilteregel apart
+
+De regel zelf staat los gemeten in `apps/worker/src/eval-stilte.ts`:
+
+```
+node dist/eval-stilte.js
+```
+
+Dat is geen modelmeting maar een controle op SQL, en hij hoort dus altijd te
+slagen — niet meestal. Acht gevallen, waaronder de drie die er echt toe doen:
+een afgesloten toezegging wordt niet heropend, de regel sluit zelf niets af, en
+een toezegging die nooit een levensteken kreeg valt alsnog op via `createdAt`.
+Twee keer draaien levert de tweede keer niets op.
+
+De testrijen dragen een marker en worden alleen op die marker opgeruimd, dus het
+script vernietigt niets als het per ongeluk tegen de echte database draait.
+
+Deze splitsing is er omdat de reconciliatieset via HTTP gedraaid wordt en de
+stilteregel een drempel in dágen heeft: alles wat je zojuist hebt ingeladen is
+per definitie vers. De regel deterministisch meten hoort dus bij de database,
+niet bij de bron.
+
 ## Slaagnorm
 
 - **nul ten onrechte afgesloten toezeggingen** — harde eis
