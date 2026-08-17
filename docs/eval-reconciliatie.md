@@ -39,8 +39,12 @@ Tot dan is dit beter dan niets meten.
    een geheugen.
 2. De synthetische bron van 26 augustus binnenhalen. Die triggert de
    reconciliatie.
-3. Toezeggingen teruglezen via `GET /api/toezeggingen`.
-4. Daarna de stilteregel draaien met een korte drempel.
+3. **Eerst de promptversie controleren, dan pas scoren.** `GET /api/bronnen/{id}`
+   geeft per call `promptVersie` en `promptVingerafdruk`. Staat daar niet de
+   versie die je dacht te meten, dan meet je de vorige deploy en is de uitkomst
+   waardeloos. Zie run 2 en 3 hieronder: dat is geen theoretisch risico.
+4. Toezeggingen teruglezen via `GET /api/toezeggingen`.
+5. Daarna de stilteregel draaien met een korte drempel.
 
 ## Wat eruit moet komen
 
@@ -165,3 +169,25 @@ daardoor kwam hij nooit bij de pass aan die er iets mee kon.
 Hieruit volgt `reconcile-v2` (afrondingen gaan mee, met `soort` en `type`, plus
 een `geen_match`-uitkomst voor een afronding die nergens bij hoort) en de
 codewijziging die beide lijsten achter elkaar aanbiedt.
+
+### Run 2 en 3 — ongeldig, oude deploy
+
+Allebei gedraaid ná het pushen van `reconcile-v2`, allebei toch met
+`reconcile-v1`. Reden: Railway bouwt van `main`, en `main` stond nog op de
+merge daarvóór. Een push naar de werkbranch verandert dus niets aan wat er
+draait.
+
+Run 2 leverde geen enkele statuswijziging op — logisch, want v1 had zijn werk in
+run 1 al gedaan en de drie afrondingen zag hij nog steeds niet. Run 3 deed er een
+dubbele toezegging bij: "Navraag doen bij leverancier van de concurrent over
+snijwijze" naast de al bestaande "Navragen welke vleesleverancier de concurrent
+(Jumbo) gebruikt". Dat is v1-gedrag op een database die al gevuld was, geen
+uitspraak over v2.
+
+**Wat dit leert over de methode, niet over de prompt:** de promptversie staat per
+call in de database, en dat is precies waarvoor. Zonder die kolom had hier een
+meting van de oude code als resultaat van de nieuwe in dit logboek gestaan.
+Controleer hem vóór het scoren, niet erna.
+
+De teller staat nu op 17 toezeggingen, waarvan één dubbel. Die vervuiling hoort
+bij deze twee runs; een echte v2-meting hoort op een schone database.
