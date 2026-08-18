@@ -191,3 +191,50 @@ Controleer hem vóór het scoren, niet erna.
 
 De teller staat nu op 17 toezeggingen, waarvan één dubbel. Die vervuiling hoort
 bij deze twee runs; een echte v2-meting hoort op een schone database.
+
+### Run 4 — 18 augustus, reconcile-v2 (`946d188f9bc0`), extract-v5
+
+Versie eerst gecontroleerd, daarna pas gescoord. **10 van de 10 bestaande punten
+met de juiste uitkomst, nul ten onrechte afgesloten, beide nieuwe toezeggingen
+aanwezig. Geslaagd.**
+
+| # | Verwacht | Werkelijk | Wanneer gezet |
+|---|---|---|---|
+| 1 | afgerond | afgerond | run 4 |
+| 2 | afgerond | afgerond | run 4 |
+| 3 | bijgewerkt | bijgewerkt | run 1, ongewijzigd gelaten |
+| 4 | zelfde | open | run 4, geen wijziging |
+| 5 | vervallen | vervallen | run 1, ongewijzigd gelaten |
+| 6 | afgerond | afgerond | run 4 |
+| 7 | bijgewerkt | bijgewerkt | run 1, ongewijzigd gelaten |
+| 8 | niet genoemd | open | met rust gelaten |
+| 9 | niet genoemd | open | met rust gelaten |
+| 10 | zelfde | open | run 4, geen wijziging |
+
+Wees precies over wat deze run bewijst en wat niet. Hij draaide bovenop de
+eindstand van run 1, dus punt 3, 5 en 7 stonden al goed. Wat v2 daar aantoont is
+dat hij ze niet alsnog stukmaakt — niet dat hij ze zelf zou vinden. Punt 1, 2 en
+6 zijn wél door deze run gezet, en dat waren precies de drie die kapot waren.
+
+Drie dingen die beter gingen dan de opzet vroeg:
+
+- **Het aantal bleef 17.** Zes toezeggingen en vijf afrondingen uit de bron, en
+  er ontstond geen enkele nieuwe rij. Alles matchte op iets bestaands. De regel
+  dat een afronding nooit een toezegging aanmaakt is daarmee ook in de praktijk
+  te zien, niet alleen in de code.
+- **De folie-afronding koos de juiste buur.** "Onderzoek naar dikkere folie is
+  gestopt" kwam binnen als `expliciet`, maar het punt waar hij bij hoorde stond
+  al op `vervallen` en viel dus buiten de matchset. In plaats van er een nieuwe
+  van te maken landde hij op "Zelf testen met folie als de andere leverancier
+  geen info deelt" — als `bijgewerkt`, met citaat "we zijn daarmee gestopt. Het
+  heeft geen zin. We gaan gewoon zelf testen". Dat is precies goed: die
+  toezegging is niet klaar, die is juist net aan de beurt.
+- **De beweging sloot niets.** "Mijlpalenplanning opvragen" kwam binnen als
+  `type: beweging` en punt 3 kreeg geen enkele nieuwe logregel. Of de rem in de
+  code heeft gewerkt of het model uit zichzelf de juiste uitkomst koos, is van
+  buitenaf niet te zien — de uitkomst is hetzelfde en dat is wat telt.
+
+Wat er nog van de vorige runs in staat: de dubbele "Navraag doen bij leverancier
+van de concurrent over snijwijze" naast "Navragen welke vleesleverancier de
+concurrent (Jumbo) gebruikt". Die is in run 3 door v1 aangemaakt. v2 heeft hem
+in run 4 herkend en met rust gelaten, maar samenvoegen is werk voor de triage.
