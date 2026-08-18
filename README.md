@@ -96,13 +96,17 @@ de `dist` van `packages/db` en `packages/core`.
 
 | Service | Build command | Start command | Env |
 |---|---|---|---|
-| `web` | `pnpm --filter @meetinghub/web build` | `pnpm --filter @meetinghub/web start` | `DATABASE_URL`, `POCKET_WEBHOOK_SECRET` |
-| `worker` | `pnpm --filter @meetinghub/worker build` | `pnpm --filter @meetinghub/worker start` | `DATABASE_URL`, `ANTHROPIC_API_KEY` |
+| `web` | `pnpm --filter @meetinghub/web build` | `pnpm --filter @meetinghub/web start` | `DATABASE_URL`, `POCKET_WEBHOOK_SECRET`, `RESEND_WEBHOOK_SECRET` |
+| `worker` | `pnpm --filter @meetinghub/worker build` | `pnpm --filter @meetinghub/worker start` | `DATABASE_URL`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY` |
 | `postgres` | — | — | extensies `vector` en `pg_trgm` aanzetten |
 | cron | — | zie onder | `DATABASE_URL` |
 
 Meer is er niet nodig. Alles wat in `.env.example` onder "nog niet in gebruik"
-staat wordt door geen regel code gelezen en hoort bij sprint 4 en 5.
+staat wordt door geen regel code gelezen en hoort bij sprint 5.
+
+`RESEND_API_KEY` staat op allebei de services en dat is geen slordigheid: web
+verstuurt er de inloglinks mee, worker haalt er de body van een inkomende mail
+mee op. Zie `docs/mail-inbound.md`.
 
 Dat zijn de commando's die Railpack zelf voorstelt, dus je hoeft ze niet te
 overschrijven. Ze werken omdat het `build` script van elke app zijn eigen
@@ -130,7 +134,12 @@ eerste extractie: anders start de worker op en loopt de wachtrij vol met jobs
 die drie keer proberen en falen. De onderhoudscommando's `verify-quotes` en
 `import-extraction` hebben alleen `DATABASE_URL` nodig.
 
-Cron:
+De stilteregel heeft geen cron-service nodig. Die staat in de planner van
+pg-boss, op dezelfde Postgres, dagelijks om 06:00 Amsterdamse tijd — dus vóór
+het ochtendgesprek. `node dist/stilte.js [dagen]` blijft bestaan voor een run
+met de hand.
+
+Cron, zodra sprint 5 er is:
 - `0 5 * * 1-5` ochtendbriefing
 - `0 14 * * 5` vrijdagdigest
 - `0 3 * * *` `select mark_stale_commitments(21)`

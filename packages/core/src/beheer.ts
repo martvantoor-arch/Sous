@@ -35,6 +35,8 @@ export interface PersoonInvoer {
   organisatie?: string | null;
   isIntern: boolean;
   aliassen: string[];
+  /** Mailadres, waarmee een inkomende mail aan deze persoon te hangen is. */
+  email?: string | null;
   /** Aan wie deze persoon rapporteert; null is bovenaan de boom. */
   managerId?: string | null;
 }
@@ -45,6 +47,18 @@ export interface TermInvoer {
   domein?: string | null;
   varianten: string[];
   notitie?: string | null;
+}
+
+/**
+ * Mailadressen altijd in kleine letters en zonder spaties opslaan.
+ *
+ * De kolom is uniek, en `Bibi@AH.nl` naast `bibi@ah.nl` zou daar zonder deze
+ * stap doorheen glippen. Dan staat dezelfde persoon twee keer in de lijst en
+ * verdwijnt de helft van zijn toezeggingen bij de andere helft.
+ */
+function normaliseerEmail(waarde: string | null | undefined): string | null {
+  const schoon = waarde?.trim().toLowerCase();
+  return schoon || null;
 }
 
 /** Splitst een invoerveld met komma's in een schone lijst zonder duplicaten. */
@@ -110,6 +124,7 @@ export async function maakPersoon(invoer: PersoonInvoer, db: DbOrTx = getDb()): 
       organisation: invoer.organisatie?.trim() || null,
       isInternal: invoer.isIntern,
       aliases: invoer.aliassen,
+      email: normaliseerEmail(invoer.email),
       managerId: invoer.managerId || null,
     })
     .returning({ id: people.id });
@@ -141,6 +156,7 @@ export async function wijzigPersoon(
     rol: invoer.rol?.trim() || null,
     organisatie: invoer.organisatie?.trim() || null,
     aliassen: invoer.aliassen,
+    email: normaliseerEmail(invoer.email),
     manager: managerId,
   };
 
@@ -152,6 +168,7 @@ export async function wijzigPersoon(
       organisation: na.organisatie,
       isInternal: invoer.isIntern,
       aliases: na.aliassen,
+      email: na.email,
       managerId,
     })
     .where(eq(people.id, id));
@@ -165,6 +182,7 @@ export async function wijzigPersoon(
       rol: voor.role,
       organisatie: voor.organisation,
       aliassen: voor.aliases,
+      email: voor.email,
       manager: voor.managerId,
     },
     na,

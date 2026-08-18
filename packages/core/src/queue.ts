@@ -3,6 +3,7 @@ import PgBoss from 'pg-boss';
 
 export const EXTRACT_QUEUE = 'source.extract';
 export const STILTE_QUEUE = 'commitments.stilte';
+export const MAIL_BODY_QUEUE = 'mail.body';
 
 export interface ExtractJob {
   sourceId: string;
@@ -11,6 +12,11 @@ export interface ExtractJob {
 
 export interface StilteJob {
   dagen: number;
+}
+
+export interface MailBodyJob {
+  sourceId: string;
+  emailId: string;
 }
 
 let boss: PgBoss | undefined;
@@ -35,6 +41,7 @@ export function getBoss(): Promise<PgBoss> {
       await instance.start();
       await instance.createQueue(EXTRACT_QUEUE);
       await instance.createQueue(STILTE_QUEUE);
+      await instance.createQueue(MAIL_BODY_QUEUE);
       boss = instance;
       return instance;
     })();
@@ -61,6 +68,24 @@ export async function enqueueExtraction(job: ExtractJob): Promise<string | null>
     singletonKey: job.force ? undefined : job.sourceId,
     expireInMinutes: JOB_EXPIRY_MINUTES,
     retryLimit: 3,
+    retryBackoff: true,
+  });
+}
+
+/**
+ * Het ophalen van een mailbody.
+ *
+ * Ruimer aantal pogingen dan bij de extractie: een extractie die faalt is
+ * meestal een fout in wat we sturen, en die lost zich niet op door het nog
+ * eens te proberen. Een mailbody die niet komt is bijna altijd de andere kant
+ * die even niet bereikbaar is, en dat lost zich wél op.
+ */
+export async function enqueueMailBody(job: MailBodyJob): Promise<string | null> {
+  const instance = await getBoss();
+  return instance.send(MAIL_BODY_QUEUE, job, {
+    singletonKey: job.sourceId,
+    expireInMinutes: 5,
+    retryLimit: 8,
     retryBackoff: true,
   });
 }

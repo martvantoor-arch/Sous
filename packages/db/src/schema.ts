@@ -31,6 +31,15 @@ export const people = pgTable('people', {
   role: text('role'),
   /** Foodconnect, Albert Heijn, leverancier */
   organisation: text('organisation'),
+  /**
+   * Mailadres, zodat een doorgestuurde mail aan een persoon te hangen is.
+   *
+   * Uniek, want twee rijen met hetzelfde adres betekent dat er iemand dubbel
+   * in de lijst staat en dat de ene helft van zijn toezeggingen bij de andere
+   * helft verdwijnt. Leeg mag: van de meeste mensen in een meeting weten we
+   * het adres niet, en dat hoeft ook niet.
+   */
+  email: text('email').unique(),
   isInternal: boolean('is_internal').notNull().default(true),
   /** ASR verhaspelingen en roepnamen */
   aliases: text('aliases').array().notNull().default(sql`'{}'`),
@@ -149,6 +158,49 @@ export const sources = pgTable('sources', {
   model: text('model'),
   createdAt: createdAt(),
 });
+
+/**
+ * Wat alleen een mail heeft.
+ *
+ * De bron zelf blijft één rij in `sources` met type `mail` — kernprincipe 2,
+ * één tabel en één pijplijn. Maar afzender, geadresseerden en het
+ * berichtnummer zijn niets voor een meeting, en tien lege kolommen op elke
+ * opname is geen datamodel maar een restant. Vandaar hiernaast, met dezelfde
+ * id.
+ *
+ * `bodyHtml` staat er los naast `sources.raw_text`: Resend levert een mail
+ * vaak in twee vormen, en welke van de twee de tekst is die Marten verstuurde
+ * hoort niet in een gok te eindigen. `raw_text` krijgt de platte versie als
+ * die er is; de html blijft hier onaangetast staan.
+ */
+export const sourceMail = pgTable(
+  'source_mail',
+  {
+    sourceId: uuid('source_id')
+      .primaryKey()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    /** letterlijk uit de header, inclusief weergavenaam */
+    fromRaw: text('from_raw').notNull(),
+    /** gekoppeld zodra we het adres herkennen; anders leeg en dus een triagevraag */
+    fromPersonId: uuid('from_person_id').references(() => people.id),
+    toRaw: text('to_raw').array().notNull().default(sql`'{}'`),
+    ccRaw: text('cc_raw').array().notNull().default(sql`'{}'`),
+    /**
+     * Het stuk achter de `+` in het ontvangende adres. `marten+blk@…` levert
+     * `blk`. Dit is het enige stukje routering dat Marten zelf typt en dus het
+     * sterkste signaal dat we over een bron hebben — sterker dan wat een model
+     * uit de inhoud afleidt.
+     */
+    routingTag: text('routing_tag'),
+    /** RFC Message-ID. Blijft gelijk als dezelfde mail twee keer binnenkomt. */
+    messageId: text('message_id'),
+    inReplyTo: text('in_reply_to'),
+    references: text('references').array().notNull().default(sql`'{}'`),
+    bodyHtml: text('body_html'),
+    headers: jsonb('headers'),
+  },
+  (t) => [index('source_mail_routing_tag_idx').on(t.routingTag)],
+);
 
 export const sourceChunks = pgTable('source_chunks', {
   id: uuid('id').primaryKey().defaultRandom(),

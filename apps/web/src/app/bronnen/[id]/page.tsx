@@ -1,7 +1,7 @@
 // De ruwe bron naast de extractie. Dit is de pagina waarop je ziet of het
 // systeem klopt: links wat er gezegd is, rechts wat het model eruit haalde.
 import { notFound } from 'next/navigation';
-import { getDb, sources, extractions, projects, people, eq, desc } from '@meetinghub/db';
+import { getDb, sources, sourceMail, extractions, projects, people, eq, desc } from '@meetinghub/db';
 import { extractionSchema, type Extraction } from '@meetinghub/core';
 
 export const dynamic = 'force-dynamic';
@@ -24,10 +24,14 @@ export default async function BronPage({ params }: { params: Promise<{ id: strin
     .limit(1);
 
   // Uuid's in de extractie zijn onleesbaar; hier maken we er namen van.
-  const [projectRows, peopleRows] = await Promise.all([
+  const [projectRows, peopleRows, mailRows] = await Promise.all([
     db.select({ id: projects.id, name: projects.name, code: projects.code }).from(projects),
     db.select({ id: people.id, name: people.name }).from(people),
+    source.type === 'mail'
+      ? db.select().from(sourceMail).where(eq(sourceMail.sourceId, id))
+      : Promise.resolve([]),
   ]);
+  const mail = mailRows[0] ?? null;
   const namen: Namen = {
     projecten: new Map(projectRows.map((p) => [p.id, p.code ? `${p.name} (${p.code})` : p.name])),
     personen: new Map(peopleRows.map((p) => [p.id, p.name])),
@@ -71,6 +75,45 @@ export default async function BronPage({ params }: { params: Promise<{ id: strin
                 niet opnieuw geëxtraheerd worden.
               </p>
             </Panel>
+          ) : mail ? (
+            <>
+              <Panel title="Envelop">
+                <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1 text-sm">
+                  <dt className="text-stone-500">van</dt>
+                  <dd>{mail.fromRaw}</dd>
+                  <dt className="text-stone-500">aan</dt>
+                  <dd>{mail.toRaw.join(', ') || '—'}</dd>
+                  {mail.ccRaw.length > 0 && (
+                    <>
+                      <dt className="text-stone-500">cc</dt>
+                      <dd>{mail.ccRaw.join(', ')}</dd>
+                    </>
+                  )}
+                  <dt className="text-stone-500">routering</dt>
+                  <dd>
+                    {mail.routingTag ? (
+                      <span className="rounded bg-stone-100 px-1.5 py-0.5 text-xs dark:bg-stone-800">
+                        +{mail.routingTag}
+                      </span>
+                    ) : (
+                      <span className="text-stone-500">geen plusadres gebruikt</span>
+                    )}
+                  </dd>
+                </dl>
+              </Panel>
+              <Panel title="Bericht">
+                {source.rawText ? (
+                  <Pre className="max-h-[32rem] overflow-y-auto">{source.rawText}</Pre>
+                ) : (
+                  // Resend levert bij een inkomende mail alleen de envelop; de
+                  // body wordt apart opgehaald. Tot dat gelukt is staat hier
+                  // niets, en dat is iets anders dan een lege mail.
+                  <p className="text-sm text-stone-600">
+                    De inhoud wordt nog opgehaald bij Resend. De extractie start zodra hij er is.
+                  </p>
+                )}
+              </Panel>
+            </>
           ) : (
             <>
               <Panel title="Samenvatting">

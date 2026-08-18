@@ -2,13 +2,16 @@
 // nooit een webhook laat aflopen.
 import {
   EXTRACT_QUEUE,
+  MAIL_BODY_QUEUE,
   STILTE_QUEUE,
   extractSource,
   getBoss,
+  haalMailBody,
   markeerStilteNa,
   plangStilte,
   stopBoss,
   type ExtractJob,
+  type MailBodyJob,
   type StilteJob,
 } from '@meetinghub/core';
 import { provision } from '@meetinghub/db';
@@ -59,6 +62,24 @@ await boss.work<ExtractJob>(EXTRACT_QUEUE, { batchSize: 1 }, async ([job]) => {
   );
 });
 
+// De body van een inkomende mail ophalen. Aparte wachtrij en niet in de route:
+// een webhook die op een derde partij wacht kan aflopen, en een mail die
+// daardoor verloren gaat krijg je nooit meer terug. Hier gaat hij bij een
+// storing gewoon opnieuw de rij in.
+await boss.work<MailBodyJob>(MAIL_BODY_QUEUE, { batchSize: 1 }, async ([job]) => {
+  if (!job) return;
+  const { sourceId, emailId } = job.data;
+  try {
+    await haalMailBody(sourceId, emailId);
+  } catch (err) {
+    console.error(
+      `[mail] body ophalen MISLUKT voor ${sourceId}:`,
+      err instanceof Error ? err.message : err,
+    );
+    throw err;
+  }
+});
+
 // De stilteregel. Geen model, geen wachtrij vol werk: één update-statement dat
 // zichtbaar maakt wat al een tijd niet meer genoemd is. Sluit niets af.
 await boss.work<StilteJob>(STILTE_QUEUE, { batchSize: 1 }, async ([job]) => {
@@ -69,7 +90,10 @@ await boss.work<StilteJob>(STILTE_QUEUE, { batchSize: 1 }, async ([job]) => {
 
 await plangStilte();
 
-console.log(`worker luistert op ${EXTRACT_QUEUE} en ${STILTE_QUEUE}, stilte staat op 06:00`);
+console.log(
+  `worker luistert op ${EXTRACT_QUEUE}, ${MAIL_BODY_QUEUE} en ${STILTE_QUEUE}; ` +
+    'stilte staat op 06:00',
+);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

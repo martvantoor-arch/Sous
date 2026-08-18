@@ -1,6 +1,7 @@
 import {
   getDb,
   sources,
+  sourceMail,
   projects,
   extractions,
   sourceProjects,
@@ -17,6 +18,7 @@ import {
   EXTRACTION_MAX_TOKENS,
   EXTRACTION_MODEL,
   EXTRACTION_PROMPT,
+  MAIL_PROMPT,
 } from '../config.js';
 import { loadPrompt } from '../prompts.js';
 import { materialiseer } from '../reconcile/run.js';
@@ -56,14 +58,21 @@ export async function extractSource(
     );
   }
 
-  const [prompt, context] = await Promise.all([loadPrompt(EXTRACTION_PROMPT), buildContext()]);
+  // Mail krijgt zijn eigen prompt. Zie MAIL_PROMPT in config.ts voor waarom dat
+  // geen tweede pijplijn is.
+  const isMail = source.type === 'mail';
+  const [prompt, context, mail] = await Promise.all([
+    loadPrompt(isMail ? MAIL_PROMPT : EXTRACTION_PROMPT),
+    buildContext(),
+    isMail ? leesMailMeta(db, source.id) : Promise.resolve(null),
+  ]);
 
   const { text } = await callClaude({
     model: EXTRACTION_MODEL,
     maxTokens: EXTRACTION_MAX_TOKENS,
     effort: EXTRACTION_EFFORT,
     systemBlocks: [prompt.system, context.text],
-    userText: renderSource(source),
+    userText: mail ? renderMail(source, mail) : renderSource(source),
     kind: 'extractie',
     promptVersion: prompt.version,
     promptFingerprint: prompt.fingerprint,
@@ -152,6 +161,50 @@ function renderSource(source: SourceRow): string {
       JSON.stringify(source.providerActions, null, 2),
     );
   }
+
+  return parts.join('\n');
+}
+
+type MailRow = typeof sourceMail.$inferSelect;
+
+async function leesMailMeta(db: DbOrTx, sourceId: string): Promise<MailRow | null> {
+  const [rij] = await db.select().from(sourceMail).where(eq(sourceMail.sourceId, sourceId));
+  return rij ?? null;
+}
+
+/**
+ * Een mail zoals het model hem te zien krijgt.
+ *
+ * De headers gaan mee omdat ze het antwoord bevatten op de vraag die bij mail
+ * het vaakst misgaat: wie schreef dit. Ze staan bewust apart van de body — de
+ * afzender van de bron is de doorstuurder, en de auteur van de inhoud staat
+ * verderop in de tekst. Dat verschil moet zichtbaar zijn, niet weggemengd.
+ *
+ * De body blijft onaangetast. Geciteerde geschiedenis knippen we er niet uit:
+ * die is nodig om een verwijzing te begrijpen, en de prompt zegt wat ermee
+ * moet. Wegknippen zou hier een oordeel zijn dat we niet kunnen terugdraaien.
+ */
+function renderMail(source: SourceRow, mail: MailRow): string {
+  const parts = [
+    '# BRON',
+    'type: mail',
+    `onderwerp: ${source.title ?? '(geen onderwerp)'}`,
+    `datum: ${source.occurredAt.toISOString().slice(0, 10)}`,
+    '',
+    '# ENVELOP',
+    'Dit is hoe de mail bij ons binnenkwam, niet wie de inhoud schreef.',
+    `van: ${mail.fromRaw}`,
+    `aan: ${mail.toRaw.join(', ') || '(onbekend)'}`,
+  ];
+
+  if (mail.ccRaw.length) parts.push(`cc: ${mail.ccRaw.join(', ')}`);
+  if (mail.routingTag) {
+    parts.push(
+      `routering: +${mail.routingTag} — dit label heeft Marten zelf getypt bij het doorsturen`,
+    );
+  }
+
+  parts.push('', '# BODY', source.rawText ?? '(geen tekst)');
 
   return parts.join('\n');
 }

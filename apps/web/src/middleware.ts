@@ -17,14 +17,15 @@ const SESSIE_COOKIE = 'meetinghub_sessie';
  * Routes die hun eigen slot meebrengen en dus geen sessie nodig hebben:
  *
  * - `/login` en `/login/verifieer` — daar kom je nog binnen zonder sessie.
- * - `/api/ingest/pocket` — Pocket kan niet inloggen; die route controleert een
- *   HMAC-handtekening over de body, wat sterker is dan een sessiecookie.
+ * - `/api/ingest/pocket` en `/api/ingest/mail` — Pocket en Resend kunnen niet
+ *   inloggen; die routes controleren een HMAC-handtekening over de body, wat
+ *   sterker is dan een sessiecookie.
  * - `/api/bronnen` en `/api/toezeggingen` — lezen af achter een bearer-token,
  *   voor de evaluatieruns. Alleen lezen, en zonder token bestaan ze niet.
  */
 const OPEN: RegExp[] = [
   /^\/login(\/|$)/,
-  /^\/api\/ingest\/pocket$/,
+  /^\/api\/ingest\/(pocket|mail)$/,
   /^\/api\/bronnen\//,
   /^\/api\/toezeggingen$/,
 ];

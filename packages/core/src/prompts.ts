@@ -10,6 +10,7 @@ export type PromptVersion =
   | 'extract-v3'
   | 'extract-v4'
   | 'extract-v5'
+  | 'extract-mail-v1'
   | 'reconcile-v1'
   | 'reconcile-v2';
 

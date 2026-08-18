@@ -35,6 +35,7 @@ function leesInvoer(formData: FormData): PersoonInvoer {
     naam: String(formData.get('naam') ?? ''),
     rol: String(formData.get('rol') ?? ''),
     organisatie: String(formData.get('organisatie') ?? ''),
+    email: String(formData.get('email') ?? ''),
     isIntern: formData.get('isIntern') === 'ja',
     aliassen: splitsLijst(String(formData.get('aliassen') ?? '')),
     managerId: String(formData.get('managerId') ?? '') || null,

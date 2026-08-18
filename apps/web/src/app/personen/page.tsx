@@ -153,6 +153,12 @@ function Groep({
                         · rapporteert aan {naam(p.managerId) ?? 'onbekend'}
                       </span>
                     )}
+                    {p.email && (
+                      // Zichtbaar omdat het adres bepaalt of een doorgestuurde
+                      // mail aan deze persoon gehangen wordt. Staat het er niet
+                      // of staat het fout, dan blijft de afzender onbekend.
+                      <span className="text-xs text-stone-500">· {p.email}</span>
+                    )}
                     {!p.active && <span className="text-xs text-stone-400">· inactief</span>}
                   </div>
 

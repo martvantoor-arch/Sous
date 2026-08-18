@@ -8,6 +8,18 @@
 export const EXTRACTION_PROMPT = (process.env.EXTRACTION_PROMPT ??
   'extract-v5') as 'extract-v1' | 'extract-v2' | 'extract-v3' | 'extract-v4' | 'extract-v5';
 
+/**
+ * De prompt voor mail. Zelfde outputcontract, ander medium.
+ *
+ * Eén pijplijn betekent één tabel, één wachtrij en één reconciliatie — niet één
+ * prompt voor elk medium. De meetingprompt gaat over ongelabelde sprekers en
+ * verhaspelde vaktermen; die problemen heeft mail niet, en mail heeft er andere
+ * voor terug: een doorstuurketen waarin de afzender niet de auteur is, en
+ * bijlagen die je niet kunt lezen. Dat oprekken tot één prompt maakt hem voor
+ * allebei slechter, en de meetingscores staan al vast.
+ */
+export const MAIL_PROMPT = (process.env.MAIL_PROMPT ?? 'extract-mail-v1') as 'extract-mail-v1';
+
 export const EXTRACTION_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5';
 
 /** Effort voor de extractie. De kwaliteitseis is nul verzinsels, dus niet zuinig. */
